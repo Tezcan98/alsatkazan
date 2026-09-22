@@ -1,6 +1,15 @@
 // =====================================================================
 //  VERİ TANIMLARI (sabit havuzlar)
 // =====================================================================
+
+// Türkiye piyasasına yakın olması için tüm baz fiyatlar bu çarpanla
+// ölçekleniyor — kaynak sayılar okunabilir kalsın diye "gerçekçi 2020
+// öncesi" seviyede yazılıp sc()/scR() ile büyütülüyor. Dengeyi değiştirmek
+// için tek yapılması gereken PRICE_SCALE'i güncellemek.
+export const PRICE_SCALE = 5.5;
+function sc(n){ return Math.round(n*PRICE_SCALE); }
+function scR(r){ return [sc(r[0]), sc(r[1])]; }
+
 export const CAR_MODELS = [
   {brand:"Volkswagen", model:"Golf 1.6", mult:1.30},
   {brand:"Renault", model:"Megane 1.5 dCi", mult:0.95},
@@ -28,17 +37,17 @@ export const BODY = ["Sedan","Hatchback","SUV","Station Wagon"];
 // Mekanik/elektrik arızaları — boya/değişen parça durumu artık ayrı
 // bir sistemle (CAR_PART_DEFS + boya/değişen şeması) yönetiliyor.
 export const FAULT_POOL_CAR = [
-  {tag:"motor", label:"Motor arızası", loss:[35000,70000], repair:[15000,28000]},
-  {tag:"motor", label:"Şanzıman sorunu", loss:[25000,55000], repair:[12000,24000]},
-  {tag:"motor", label:"Turbo arızası", loss:[20000,40000], repair:[10000,20000]},
-  {tag:"diger", label:"Lastik değişimi gerekiyor", loss:[6000,12000], repair:[5000,9000]},
-  {tag:"diger", label:"Fren balatası bitmiş", loss:[4000,9000], repair:[2500,5000]},
-  {tag:"diger", label:"Klima çalışmıyor", loss:[5000,11000], repair:[3000,7000]},
-  {tag:"diger", label:"Elektrik aksamında arıza", loss:[7000,15000], repair:[4000,9000]},
-  {tag:"diger", label:"Cam/ayna kırık", loss:[3000,7000], repair:[1500,3500]},
-  {tag:"diger", label:"Akü ve şarj sistemi zayıf", loss:[2500,6000], repair:[1500,3000]}
+  {tag:"motor", label:"Motor arızası", loss:scR([35000,70000]), repair:scR([15000,28000])},
+  {tag:"motor", label:"Şanzıman sorunu", loss:scR([25000,55000]), repair:scR([12000,24000])},
+  {tag:"motor", label:"Turbo arızası", loss:scR([20000,40000]), repair:scR([10000,20000])},
+  {tag:"diger", label:"Lastik değişimi gerekiyor", loss:scR([6000,12000]), repair:scR([5000,9000])},
+  {tag:"diger", label:"Fren balatası bitmiş", loss:scR([4000,9000]), repair:scR([2500,5000])},
+  {tag:"diger", label:"Klima çalışmıyor", loss:scR([5000,11000]), repair:scR([3000,7000])},
+  {tag:"diger", label:"Elektrik aksamında arıza", loss:scR([7000,15000]), repair:scR([4000,9000])},
+  {tag:"diger", label:"Cam/ayna kırık", loss:scR([3000,7000]), repair:scR([1500,3500])},
+  {tag:"diger", label:"Akü ve şarj sistemi zayıf", loss:scR([2500,6000]), repair:scR([1500,3000])}
 ];
-export const HEAVY_FAULT = {tag:"hasar", label:"Ağır hasar kaydı (şasi/kaporta)", loss:[45000,90000], repair:[25000,50000], heavy:true};
+export const HEAVY_FAULT = {tag:"hasar", label:"Ağır hasar kaydı (şasi/kaporta)", loss:scR([45000,90000]), repair:scR([25000,50000]), heavy:true};
 
 // ---- sahibinden.com tarzı boya/değişen parça şeması ----
 // Her araç için 11 kaporta parçasının durumu (orijinal / boyalı / değişen)
@@ -58,8 +67,8 @@ export const CAR_PART_DEFS = [
 ];
 export const PART_STATUS = {
   orijinal: {label:"Orijinal", color:"#9aa4ad"},
-  boyali: {label:"Boyalı", color:"#e0980a", loss:[3000,7000], repair:[2500,5500]},
-  degisen: {label:"Değişen", color:"#c62828", loss:[6000,13000], repair:[4500,9500]}
+  boyali: {label:"Boyalı", color:"#e0980a", loss:scR([3000,7000]), repair:scR([2500,5500])},
+  degisen: {label:"Değişen", color:"#c62828", loss:scR([6000,13000]), repair:scR([4500,9500])}
 };
 
 export const CAR_AD_PHRASES = [
@@ -107,12 +116,12 @@ export const SELLER_CLOSING_CAR = [
 
 export const ARSA_IMAR = ["Konut İmarlı","Ticari İmarlı","Tarla","Bağ-Bahçe","Sanayi İmarlı"];
 export const ARSA_ISSUES_POOL = [
-  {tag:"tapu", label:"Tapuda ipotek kaydı var", loss:[15000,35000]},
-  {tag:"tapu", label:"Haciz şerhi var", loss:[20000,45000]},
-  {tag:"yol", label:"Yola cephesi yok", loss:[10000,25000]},
-  {tag:"imar", label:"İmar durumu belirsiz / ihtilaflı", loss:[12000,30000]},
-  {tag:"tapu", label:"Hisseli tapu (ortaklı)", loss:[18000,32000]},
-  {tag:"imar", label:"Deprem riski / zemin etüdü sorunlu", loss:[15000,28000]}
+  {tag:"tapu", label:"Tapuda ipotek kaydı var", loss:scR([15000,35000])},
+  {tag:"tapu", label:"Haciz şerhi var", loss:scR([20000,45000])},
+  {tag:"yol", label:"Yola cephesi yok", loss:scR([10000,25000])},
+  {tag:"imar", label:"İmar durumu belirsiz / ihtilaflı", loss:scR([12000,30000])},
+  {tag:"tapu", label:"Hisseli tapu (ortaklı)", loss:scR([18000,32000])},
+  {tag:"imar", label:"Deprem riski / zemin etüdü sorunlu", loss:scR([15000,28000])}
 ];
 export const ARSA_AD_PHRASES = [
   "Yatırımlık, hızla değerlenen bölgede.",
@@ -139,8 +148,8 @@ export const SELLER_CLOSING_ARSA = [
 ];
 
 export const SHOP_TYPES = [
-  {type:"galeri", title:"Oto Galerisi", accepts:"araba", capacity:[2,4], rent:[3000,8000], price:[90000,230000]},
-  {type:"emlak", title:"Emlak Ofisi", accepts:"arsa", capacity:[2,3], rent:[2500,6000], price:[60000,180000]}
+  {type:"galeri", title:"Oto Galerisi", accepts:"araba", capacity:[2,4], rent:scR([3000,8000]), price:scR([90000,230000])},
+  {type:"emlak", title:"Emlak Ofisi", accepts:"arsa", capacity:[2,3], rent:scR([2500,6000]), price:scR([60000,180000])}
 ];
 export const DUKKAN_AD_PHRASES = [
   "Demirbaşlarıyla birlikte devren satılıktır.",
@@ -169,14 +178,16 @@ export const AMBIENT_EVENTS = [
   "Bankadan kredi faizleriyle ilgili haber geldi.",
   "Bir tanıdık, aracını senden almak istediğini söyledi.",
   "Kiracı adaylarından biri bölgeni sordu.",
-  "Ekspertiz firması yeni bir cihaz aldı, raporlar hızlanacak."
+  "Ekspertiz firması yeni bir cihaz aldı, raporlar hızlanacak.",
+  "Döviz kurundaki hareket ikinci el fiyatlarını etkiliyor.",
+  "Bu ay motorlu taşıtlar vergisi taksidi hatırlatması geldi."
 ];
 
 export const PARTS_CATALOG = [
-  {tag:"motor", name:"Motor / Şanzıman Parçası", basePrice:8000},
-  {tag:"boya", name:"Kaporta / Boya Malzemesi", basePrice:2500},
-  {tag:"diger", name:"Lastik / Fren / Klima Sarfı", basePrice:1800},
-  {tag:"hasar", name:"Ağır Hasar Onarım Seti", basePrice:15000}
+  {tag:"motor", name:"Motor / Şanzıman Parçası", basePrice:sc(8000)},
+  {tag:"boya", name:"Kaporta / Boya Malzemesi", basePrice:sc(2500)},
+  {tag:"diger", name:"Lastik / Fren / Klima Sarfı", basePrice:sc(1800)},
+  {tag:"hasar", name:"Ağır Hasar Onarım Seti", basePrice:sc(15000)}
 ];
 export const SKILL_LABELS = { tamir:"Tamir Ustalığı", pazarlik:"Pazarlık Ustalığı", ekspertiz:"Ekspertiz Gözü", isletme:"İşletmecilik", sabir:"Sabır" };
 export const SKILL_XP_PER_LEVEL = 120;
@@ -190,11 +201,11 @@ export const BUYER_DISCOUNT_LINES = [
 ];
 
 export const MASRAF_OPTIONS = [
-  {id:"tadilat", name:"Tadilat / Yenileme", desc:"Vitrin kapasitesini kalıcı olarak +1 artırır.", cost:15000},
-  {id:"reklam", name:"Reklam Panosu", desc:"Vitrindeki ürünlerin günlük kendiliğinden satılma şansını artırır.", cost:5000},
-  {id:"demirbas", name:"Demirbaş Yenileme", desc:"Aylık kirayı kalıcı olarak %10 azaltır.", cost:8000},
-  {id:"sigorta", name:"İşyeri Sigortası", desc:"Kiracı memnuniyet düşüşlerini yavaşlatır.", cost:6000},
-  {id:"egitim", name:"Personel Eğitimi", desc:"Vitrindeki ürünlerin satış fiyatını biraz artırır.", cost:10000}
+  {id:"tadilat", name:"Tadilat / Yenileme", desc:"Vitrin kapasitesini kalıcı olarak +1 artırır.", cost:sc(15000)},
+  {id:"reklam", name:"Reklam Panosu", desc:"Vitrindeki ürünlerin günlük kendiliğinden satılma şansını artırır.", cost:sc(5000)},
+  {id:"demirbas", name:"Demirbaş Yenileme", desc:"Aylık kirayı kalıcı olarak %10 azaltır.", cost:sc(8000)},
+  {id:"sigorta", name:"İşyeri Sigortası", desc:"Kiracı memnuniyet düşüşlerini yavaşlatır.", cost:sc(6000)},
+  {id:"egitim", name:"Personel Eğitimi", desc:"Vitrindeki ürünlerin satış fiyatını biraz artırır.", cost:sc(10000)}
 ];
 export const TENANT_NAMES = ["Mehmet Usta","Ayşe Hanım","Kemal Bey","Fatma Hanım","Serkan Bey","Elif Hanım","Murat Bey","Zeynep Hanım","Hakan Bey","Derya Hanım"];
 export const TENANT_BUSINESS_ARABA = ["Oto Yedek Parça Satışı","İkinci El Oto Alım Satım","Araç Kiralama Ofisi","Oto Yıkama ve Detaylı Bakım"];
@@ -220,4 +231,13 @@ export const USTALAR = [
 ];
 
 export const INSPECT_RATE = 0.02;
-export const MIN_INSPECT = 400;
+export const MIN_INSPECT = sc(400);
+
+// ---- Banka Kredisi ----
+// Kontrol Paneli → Profil altından çekilebilen sabit tutarlı krediler;
+// her gün geçişinde faiz işler ve otomatik asgari ödeme düşülür.
+export const LOAN_TIERS = [
+  { amount: sc(200000), dailyRate: 0.018, dailyPaymentRate: 0.07 },
+  { amount: sc(500000), dailyRate: 0.022, dailyPaymentRate: 0.065 },
+  { amount: sc(1000000), dailyRate: 0.026, dailyPaymentRate: 0.06 }
+];

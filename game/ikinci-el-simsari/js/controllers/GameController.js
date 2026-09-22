@@ -7,8 +7,10 @@ import { ConfirmDialog } from '../services/ConfirmDialog.js';
 import {
   CAR_QUESTIONS, ARSA_QUESTIONS, USTALAR, MASRAF_OPTIONS,
   TENANT_NAMES, TENANT_BUSINESS_ARABA, TENANT_BUSINESS_ARSA,
-  BUYER_NAMES, BUYER_DISCOUNT_LINES
+  BUYER_NAMES, BUYER_DISCOUNT_LINES, PRICE_SCALE, LOAN_TIERS
 } from '../data/constants.js';
+
+function sc(n){ return Math.round(n*PRICE_SCALE); }
 
 // =====================================================================
 //  OYUN DENETLEYİCİSİ (Controller katmanı)
@@ -116,7 +118,7 @@ export var Game = {
   checkForKazik: function(item, wasInspected){
     if(wasInspected) return;
     var totalLoss = item.faults.reduce(function(s,f){return s+f.loss;},0);
-    if(totalLoss < 15000) return;
+    if(totalLoss < sc(15000)) return;
     var player = this.player;
     var sabirLvl = player.skillLevel('sabir');
     var mitigation = clamp(sabirLvl*0.03, 0, 0.3);
@@ -124,7 +126,7 @@ export var Game = {
     if(recovered>0) item.trueValue += recovered;
     this.addLog('Kazık yedin! ' + item.title + ' üzerinde ' + fmt(totalLoss) + ' değerinde gizli arıza çıktı' + (recovered>0 ? ' (Sabır sayesinde ' + fmt(recovered) + ' telafi edildi)' : '') + '.', 'neg');
     toast('Ekspertizsiz alım risklidir — kazık yedin!');
-    player.addXp('sabir', clamp(Math.round(totalLoss/900), 6, 35));
+    player.addXp('sabir', clamp(Math.round(totalLoss/sc(900)), 6, 35));
   },
 
   askQuestion: function(id, key){
@@ -477,6 +479,36 @@ export var Game = {
     this.render();
   },
 
+  // ---- Banka Kredisi ----
+  // Büyük alımlar (özellikle arsa/dükkan) için ek nakit sağlar; her gün
+  // faiz işler ve bakiyeden otomatik asgari ödeme düşülür.
+  takeLoan: function(tierIdx){
+    var player = this.player;
+    if(player.loan){ toast('Zaten açık bir kredin var, önce onu kapat.'); return; }
+    var tier = LOAN_TIERS[tierIdx];
+    if(!tier) return;
+    player.loan = {
+      amount: tier.amount, remaining: tier.amount,
+      dailyRate: tier.dailyRate, dailyPayment: Math.round(tier.amount*tier.dailyPaymentRate)
+    };
+    player.earn(tier.amount);
+    this.addLog('Bankadan kredi çekildi: ' + fmt(tier.amount) + ' (günlük faiz %' + (tier.dailyRate*100).toFixed(1) + ')', 'pos');
+    toast('Kredi hesabına yatırıldı: ' + fmt(tier.amount));
+    this.render();
+  },
+
+  repayLoan: function(){
+    var player = this.player;
+    if(!player.loan) return;
+    var remaining = player.loan.remaining;
+    if(!player.canAfford(remaining)){ toast('Krediyi kapatmak için bakiyen yetersiz.'); return; }
+    player.spend(remaining);
+    this.addLog('Kredi tamamen kapatıldı: ' + fmt(remaining), 'neg');
+    toast('Kredi kapatıldı.');
+    player.loan = null;
+    this.render();
+  },
+
   doNextDay: function(){
     var self = this, state = this.state, player = this.player;
     var desc = TransactionManager.nextDay(player);
@@ -484,6 +516,20 @@ export var Game = {
       state.day += 1;
       state.listings = Market.refreshListings();
       state.partsMarket = Market.refreshPartsMarket();
+
+      if(player.loan){
+        var loan = player.loan;
+        loan.remaining += Math.round(loan.remaining*loan.dailyRate);
+        var payment = Math.min(loan.dailyPayment, loan.remaining, Math.max(0,player.balance));
+        player.spend(payment);
+        loan.remaining -= payment;
+        if(loan.remaining <= 1){
+          self.addLog('Banka kredisi tamamen ödendi.', 'pos');
+          player.loan = null;
+        } else {
+          self.addLog('Kredi ödemesi yapıldı: ' + fmt(payment) + ' (kalan borç: ' + fmt(loan.remaining) + ')', 'neg');
+        }
+      }
 
       var iLvl = player.skillLevel('isletme');
       var rentDiscount = clamp(iLvl*0.02, 0, 0.25);
@@ -561,18 +607,20 @@ export var Game = {
   }
 };
 
+var TENANT_FIX_COST = sc(3000);
+var TENANT_GLASS_COST = sc(2500);
 export var TENANT_REQUESTS = [
   { text:"Kira çok yüksek, biraz indirim rica ediyorum.",
     onAccept:function(shop){ shop.tenant.rent = Math.round(shop.tenant.rent*0.9); shop.tenant.satisfaction = clamp(shop.tenant.satisfaction+15,0,100); },
     onReject:function(shop){ shop.tenant.satisfaction = clamp(shop.tenant.satisfaction-10,0,100); } },
-  { text:"Tesisatta arıza var, tamiri için 3.000 ₺ rica ediyorum.", cost:3000,
-    onAccept:function(shop, player){ player.spend(3000); shop.tenant.satisfaction = clamp(shop.tenant.satisfaction+10,0,100); },
+  { text:"Tesisatta arıza var, tamiri için " + fmt(TENANT_FIX_COST) + " rica ediyorum.", cost:TENANT_FIX_COST,
+    onAccept:function(shop, player){ player.spend(TENANT_FIX_COST); shop.tenant.satisfaction = clamp(shop.tenant.satisfaction+10,0,100); },
     onReject:function(shop){ shop.tenant.satisfaction = clamp(shop.tenant.satisfaction-15,0,100); } },
   { text:"Sözleşmeyi uzatmak istiyorum, her şey yolunda, teşekkürler.",
     onAccept:function(shop){ shop.tenant.satisfaction = clamp(shop.tenant.satisfaction+5,0,100); },
     onReject:function(shop){} },
-  { text:"Vitrin camını yeniletmek istiyorum, 2.500 ₺ masraf çıkar.", cost:2500,
-    onAccept:function(shop, player){ player.spend(2500); shop.tenant.satisfaction = clamp(shop.tenant.satisfaction+8,0,100); },
+  { text:"Vitrin camını yeniletmek istiyorum, " + fmt(TENANT_GLASS_COST) + " masraf çıkar.", cost:TENANT_GLASS_COST,
+    onAccept:function(shop, player){ player.spend(TENANT_GLASS_COST); shop.tenant.satisfaction = clamp(shop.tenant.satisfaction+8,0,100); },
     onReject:function(shop){ shop.tenant.satisfaction = clamp(shop.tenant.satisfaction-8,0,100); } },
   { text:"İşler iyi gidiyor, ek bir ay kira avans ödemek istiyorum.",
     onAccept:function(shop, player){ player.earn(shop.tenant.rent); shop.tenant.satisfaction = clamp(shop.tenant.satisfaction+6,0,100); },

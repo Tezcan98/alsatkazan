@@ -1,7 +1,8 @@
 import { fmt } from '../utils.js';
 import { Game } from '../controllers/GameController.js';
-import { SKILL_LABELS } from '../data/constants.js';
+import { SKILL_LABELS, LOAN_TIERS } from '../data/constants.js';
 import { IMG } from '../data/images.js';
+import { OperationManager } from '../services/OperationManager.js';
 
 // =====================================================================
 //  PROFİLİM (Görünüm katmanı) — Kontrol Paneli alt sayfası
@@ -48,6 +49,48 @@ export var ProfilView = {
       'Dükkan sayısı: <b>' + state.shops.length + '</b>';
     card.appendChild(statsDiv);
     container.appendChild(card);
+
+    var h2l = document.createElement('h2');
+    h2l.className = 'section';
+    h2l.textContent = 'Banka Kredisi';
+    container.appendChild(h2l);
+    var loanCard = document.createElement('div');
+    loanCard.className = 'card';
+    var busy = OperationManager.isBusy();
+    if(player.loan){
+      var loan = player.loan;
+      loanCard.innerHTML =
+        '<div class="kicker">Açık kredi</div>' +
+        '<div style="font-size:0.85rem;line-height:1.7;margin-top:4px;">' +
+        'Kalan borç: <b>' + fmt(loan.remaining) + '</b><br>' +
+        'Günlük faiz: <b>%' + (loan.dailyRate*100).toFixed(1) + '</b><br>' +
+        'Günlük asgari ödeme: <b>' + fmt(loan.dailyPayment) + '</b> (otomatik düşülür)' +
+        '</div>';
+      var payBtn = document.createElement('button');
+      payBtn.className = 'btn-orange btn-sm';
+      payBtn.style.marginTop = '8px';
+      payBtn.textContent = 'Tamamını Öde (' + fmt(loan.remaining) + ')';
+      payBtn.disabled = busy || player.balance < loan.remaining;
+      payBtn.onclick = function(){ Game.repayLoan(); };
+      loanCard.appendChild(payBtn);
+    } else {
+      var loanDesc = document.createElement('div');
+      loanDesc.className = 'kicker';
+      loanDesc.textContent = 'Büyük bir alım için nakit lazımsa bankadan kredi çekebilirsin — her gün faiz işler ve bakiyenden otomatik asgari ödeme düşülür.';
+      loanCard.appendChild(loanDesc);
+      var tierRow = document.createElement('div');
+      tierRow.style.display = 'flex'; tierRow.style.gap = '6px'; tierRow.style.flexWrap = 'wrap'; tierRow.style.marginTop = '8px';
+      LOAN_TIERS.forEach(function(tier, idx){
+        var btn = document.createElement('button');
+        btn.className = 'btn-ghost btn-sm';
+        btn.textContent = fmt(tier.amount) + ' (%' + (tier.dailyRate*100).toFixed(1) + '/gün)';
+        btn.disabled = busy;
+        btn.onclick = function(){ Game.takeLoan(idx); };
+        tierRow.appendChild(btn);
+      });
+      loanCard.appendChild(tierRow);
+    }
+    container.appendChild(loanCard);
 
     var h2b = document.createElement('h2');
     h2b.className = 'section';

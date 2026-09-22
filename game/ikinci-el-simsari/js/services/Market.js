@@ -5,7 +5,8 @@ import {
   ARSA_IMAR, ARSA_ISSUES_POOL, ARSA_AD_PHRASES, SHOP_TYPES, DUKKAN_AD_PHRASES,
   PARTS_CATALOG, CAR_PART_DEFS, PART_STATUS,
   SELLER_REASONS_CAR, SELLER_USAGE_CAR, SELLER_CLOSING_CAR,
-  SELLER_REASONS_ARSA, SELLER_CLOSING_ARSA, SELLER_REASONS_DUKKAN
+  SELLER_REASONS_ARSA, SELLER_CLOSING_ARSA, SELLER_REASONS_DUKKAN,
+  PRICE_SCALE
 } from '../data/constants.js';
 
 // =====================================================================
@@ -63,11 +64,11 @@ export var Market = {
       faults.push({ tag:HEAVY_FAULT.tag, label:HEAVY_FAULT.label, loss:rnd(HEAVY_FAULT.loss[0],HEAVY_FAULT.loss[1]), repairCost:rnd(HEAVY_FAULT.repair[0],HEAVY_FAULT.repair[1]), fixed:false, heavy:true });
     }
     var yearFactor = 0.55 + (year-2011) * 0.045;
-    var baseValue = Math.round(rnd(170000,260000) * yearFactor);
+    var baseValue = Math.round(rnd(170000,260000) * PRICE_SCALE * yearFactor);
     var totalLoss = faults.reduce(function(s,f){return s+f.loss;},0);
     var askingBase = baseValue - totalLoss;
     var noise = 0.85 + Math.random()*0.35;
-    var askingPrice = Math.max(30000, Math.round(askingBase*noise));
+    var askingPrice = Math.max(Math.round(30000*PRICE_SCALE), Math.round(askingBase*noise));
 
     var carDef = pick(CAR_MODELS);
     return new Car({
@@ -83,7 +84,7 @@ export var Market = {
 
   makeArsa: function(){
     var m2 = rnd(150, 2500);
-    var pricePerM2 = rnd(400, 2600);
+    var pricePerM2 = rnd(400, 2600) * PRICE_SCALE;
     var baseValue = Math.round(m2*pricePerM2);
     var issueCount = Math.random() < 0.35 ? 0 : rnd(1,3);
     var pool = ARSA_ISSUES_POOL.slice();
@@ -96,7 +97,7 @@ export var Market = {
     var totalLoss = issues.reduce(function(s,f){return s+f.loss;},0);
     var askingBase = baseValue - totalLoss;
     var noise = 0.85 + Math.random()*0.35;
-    var askingPrice = Math.max(20000, Math.round(askingBase*noise));
+    var askingPrice = Math.max(Math.round(20000*PRICE_SCALE), Math.round(askingBase*noise));
     var reason = pick(SELLER_REASONS_ARSA);
     var extra = pick(ARSA_AD_PHRASES);
     var closing = pick(SELLER_CLOSING_ARSA);
