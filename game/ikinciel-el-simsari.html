@@ -226,6 +226,12 @@
   }
   nav.bottombar button .ic{ font-size:1.1rem; }
   nav.bottombar button.active{ color:#fff; background:rgba(255,255,255,0.08); border-top:2px solid var(--orange); padding-top:7px; }
+  nav.bottombar.nav-busy{ position:relative; }
+  nav.bottombar.nav-busy:before{
+    content:""; position:absolute; top:-6px; right:10px; width:8px; height:8px; border-radius:50%;
+    background:var(--orange); box-shadow:0 0 0 rgba(255,180,0,0.6); animation:navPulse 1.1s ease-out infinite;
+  }
+  @keyframes navPulse{ 0%{ box-shadow:0 0 0 0 rgba(255,180,0,0.55);} 100%{ box-shadow:0 0 0 8px rgba(255,180,0,0);} }
 
   body{ padding-bottom:0; }
   main{ margin-bottom:0; }
@@ -274,7 +280,8 @@
     animation:spin 0.7s linear infinite; flex:0 0 auto;
   }
   @keyframes spin{ to{ transform:rotate(360deg); } }
-  .busybar .bblabel{ flex:1 1 auto; }
+  .busybar .bblabel{ flex:1 1 auto; min-width:0; line-height:1.35; }
+  .busybar .bblabel div:first-child{ font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .busybar .bbtrack{ position:absolute; left:0; right:0; bottom:0; height:3px; background:rgba(255,255,255,0.15); }
   .busybar .bbfill{ height:100%; background:var(--orange); width:0%; transition:width 0.1s linear; }
 
@@ -348,22 +355,31 @@
     {brand:"Peugeot", model:"301 1.5", mult:0.90},
     {brand:"Dacia", model:"Duster 1.5 dCi", mult:0.70},
     {brand:"Skoda", model:"Octavia 1.6", mult:1.20},
-    {brand:"Citroen", model:"C-Elysee 1.6", mult:0.85}
+    {brand:"Citroen", model:"C-Elysee 1.6", mult:0.85},
+    {brand:"BMW", model:"3.20i", mult:1.75},
+    {brand:"Mercedes", model:"C 180", mult:1.85},
+    {brand:"Suzuki", model:"Swift 1.2", mult:0.75},
+    {brand:"Seat", model:"Leon 1.6", mult:1.05}
   ];
-  var COLORS = ["Beyaz","Gri","Siyah","Kırmızı","Lacivert","Gümüş"];
-  var CITIES = ["İstanbul","Ankara","İzmir","Bursa","Kocaeli","Antalya","Gaziantep","Konya"];
+  var COLORS = ["Beyaz","Gri","Siyah","Kırmızı","Lacivert","Gümüş","Bej","Yeşil"];
+  var CITIES = ["İstanbul","Ankara","İzmir","Bursa","Kocaeli","Antalya","Gaziantep","Konya","Eskişehir","Mersin"];
   var TRANS = ["Manuel","Otomatik"];
   var FUEL = ["Benzin","Dizel","LPG'li Benzin","Hibrit"];
-  var BODY = ["Sedan","Hatchback","SUV"];
+  var BODY = ["Sedan","Hatchback","SUV","Station Wagon"];
 
   var FAULT_POOL_CAR = [
     {tag:"motor", label:"Motor arızası", loss:[35000,70000], repair:[15000,28000]},
     {tag:"motor", label:"Şanzıman sorunu", loss:[25000,55000], repair:[12000,24000]},
+    {tag:"motor", label:"Turbo arızası", loss:[20000,40000], repair:[10000,20000]},
     {tag:"boya", label:"Boyalı kaput", loss:[8000,18000], repair:[4000,9000]},
     {tag:"boya", label:"Değişen kapı", loss:[10000,20000], repair:[5000,11000]},
+    {tag:"boya", label:"Değişen tampon", loss:[6000,14000], repair:[3000,7000]},
     {tag:"diger", label:"Lastik değişimi gerekiyor", loss:[6000,12000], repair:[5000,9000]},
     {tag:"diger", label:"Fren balatası bitmiş", loss:[4000,9000], repair:[2500,5000]},
-    {tag:"diger", label:"Klima çalışmıyor", loss:[5000,11000], repair:[3000,7000]}
+    {tag:"diger", label:"Klima çalışmıyor", loss:[5000,11000], repair:[3000,7000]},
+    {tag:"diger", label:"Elektrik aksamında arıza", loss:[7000,15000], repair:[4000,9000]},
+    {tag:"diger", label:"Cam/ayna kırık", loss:[3000,7000], repair:[1500,3500]},
+    {tag:"diger", label:"Akü ve şarj sistemi zayıf", loss:[2500,6000], repair:[1500,3000]}
   ];
   var HEAVY_FAULT = {tag:"hasar", label:"Ağır hasar kaydı (şasi/kaporta)", loss:[45000,90000], repair:[25000,50000], heavy:true};
 
@@ -375,7 +391,11 @@
     "Takasa ve makul pazarlığa açıktır.",
     "Aracı gören alacaktır, acil satılıktır.",
     "Yeni lastikleri ve akü değişimi mevcuttur.",
-    "Ekspertiz raporu ilan sahibinde mevcuttur, talep üzerine paylaşılır."
+    "Ekspertiz raporu ilan sahibinde mevcuttur, talep üzerine paylaşılır.",
+    "Hatasız, boyasız, değişensizdir.",
+    "Bayi çıkışlı, tüm bakımları faturalıdır.",
+    "Ailemin ikinci aracıydı, günlük şehir içi kullanıldı.",
+    "Fiyatımda pazarlık payı vardır, ciddi alıcılar arasın."
   ];
 
   var ARSA_IMAR = ["Konut İmarlı","Ticari İmarlı","Tarla","Bağ-Bahçe","Sanayi İmarlı"];
@@ -383,7 +403,9 @@
     {tag:"tapu", label:"Tapuda ipotek kaydı var", loss:[15000,35000]},
     {tag:"tapu", label:"Haciz şerhi var", loss:[20000,45000]},
     {tag:"yol", label:"Yola cephesi yok", loss:[10000,25000]},
-    {tag:"imar", label:"İmar durumu belirsiz / ihtilaflı", loss:[12000,30000]}
+    {tag:"imar", label:"İmar durumu belirsiz / ihtilaflı", loss:[12000,30000]},
+    {tag:"tapu", label:"Hisseli tapu (ortaklı)", loss:[18000,32000]},
+    {tag:"imar", label:"Deprem riski / zemin etüdü sorunlu", loss:[15000,28000]}
   ];
   var ARSA_AD_PHRASES = [
     "Yatırımlık, hızla değerlenen bölgede.",
@@ -391,7 +413,25 @@
     "Acil nakit ihtiyacından satılıktır.",
     "Tapuda hisseli değil, müstakil parseldir.",
     "Manzaralı, köşe parseldir.",
-    "Belediye alt yapı çalışması bölgeye ulaşmıştır."
+    "Belediye alt yapı çalışması bölgeye ulaşmıştır.",
+    "Miras nedeniyle acil satılıktır.",
+    "Toplu konut projelerine yakın konumdadır."
+  ];
+
+  // Bekleme sırasında oyalanmak için akan piyasa haberleri (kozmetik)
+  var AMBIENT_EVENTS = [
+    "Piyasada dizel araçlara talep arttı.",
+    "Bu hafta arsa fiyatlarında hafif yükseliş var.",
+    "Komşu simsar büyük bir SUV sattığını duyurdu.",
+    "Yetkili serviste bu hafta yoğunluk var, sıra uzadı.",
+    "Bir müşteri galerine uğradı ama eli boş döndü.",
+    "Mahalle ustası kahve molasında, iş biraz gecikebilir.",
+    "Yedek parça tedarikçisi yeni bir sevkiyat aldı.",
+    "Bölgede yeni bir imar planı konuşuluyor.",
+    "Bankadan kredi faizleriyle ilgili haber geldi.",
+    "Bir tanıdık, aracını senden almak istediğini söyledi.",
+    "Kiracı adaylarından biri bölgeni sordu.",
+    "Ekspertiz firması yeni bir cihaz aldı, raporlar hızlanacak."
   ];
 
   var SHOP_TYPES = [
@@ -418,11 +458,13 @@
   var MASRAF_OPTIONS = [
     {id:"tadilat", name:"Tadilat / Yenileme", desc:"Vitrin kapasitesini kalıcı olarak +1 artırır.", cost:15000},
     {id:"reklam", name:"Reklam Panosu", desc:"Vitrindeki ürünlerin günlük kendiliğinden satılma şansını artırır.", cost:5000},
-    {id:"demirbas", name:"Demirbaş Yenileme", desc:"Aylık kirayı kalıcı olarak %10 azaltır.", cost:8000}
+    {id:"demirbas", name:"Demirbaş Yenileme", desc:"Aylık kirayı kalıcı olarak %10 azaltır.", cost:8000},
+    {id:"sigorta", name:"İşyeri Sigortası", desc:"Kiracı memnuniyet düşüşlerini yavaşlatır.", cost:6000},
+    {id:"egitim", name:"Personel Eğitimi", desc:"Vitrindeki ürünlerin satış fiyatını biraz artırır.", cost:10000}
   ];
-  var TENANT_NAMES = ["Mehmet Usta","Ayşe Hanım","Kemal Bey","Fatma Hanım","Serkan Bey","Elif Hanım","Murat Bey","Zeynep Hanım"];
-  var TENANT_BUSINESS_ARABA = ["Oto Yedek Parça Satışı","İkinci El Oto Alım Satım","Araç Kiralama Ofisi"];
-  var TENANT_BUSINESS_ARSA = ["Emlak Danışmanlığı","Sigorta Acenteliği","Tapu / Kadastro Danışmanlığı"];
+  var TENANT_NAMES = ["Mehmet Usta","Ayşe Hanım","Kemal Bey","Fatma Hanım","Serkan Bey","Elif Hanım","Murat Bey","Zeynep Hanım","Hakan Bey","Derya Hanım"];
+  var TENANT_BUSINESS_ARABA = ["Oto Yedek Parça Satışı","İkinci El Oto Alım Satım","Araç Kiralama Ofisi","Oto Yıkama ve Detaylı Bakım"];
+  var TENANT_BUSINESS_ARSA = ["Emlak Danışmanlığı","Sigorta Acenteliği","Tapu / Kadastro Danışmanlığı","Peyzaj ve Bahçe Tasarımı"];
 
   var CAR_QUESTIONS = [
     {key:"hasar", text:"Ağır hasar kaydı var mı?"},
@@ -438,9 +480,9 @@
   ];
 
   var USTALAR = [
-    {id:"mahalle", name:"Mahalle Ustası", desc:"Ucuz ama riskli. İşi bazen yarım bırakır.", priceMult:0.55, baseSuccess:0.60, heavyPenalty:0.30, durationMs:900},
-    {id:"bilinen", name:"Bildiğim Usta", desc:"Dengeli fiyat, çoğunlukla iş bitirir.", priceMult:1.0, baseSuccess:0.85, heavyPenalty:0.20, durationMs:1500},
-    {id:"yetkili", name:"Yetkili Servis", desc:"Pahalı ama garantili iş çıkarır.", priceMult:1.7, baseSuccess:0.97, heavyPenalty:0.10, durationMs:2300}
+    {id:"mahalle", name:"Mahalle Ustası", desc:"Ucuz ama riskli. İşi bazen yarım bırakır.", priceMult:0.55, baseSuccess:0.60, heavyPenalty:0.30, hours:1.5},
+    {id:"bilinen", name:"Bildiğim Usta", desc:"Dengeli fiyat, çoğunlukla iş bitirir.", priceMult:1.0, baseSuccess:0.85, heavyPenalty:0.20, hours:3},
+    {id:"yetkili", name:"Yetkili Servis", desc:"Pahalı ama garantili iş çıkarır.", priceMult:1.7, baseSuccess:0.97, heavyPenalty:0.10, hours:5}
   ];
 
   var INSPECT_RATE = 0.02;
@@ -449,41 +491,58 @@
   // =====================================================================
   //  İŞLEM YÖNETİCİSİ — tüm ücret / süre / risk hesapları burada
   // =====================================================================
-  // Her işlem tipi için tek yerden: maliyet, gerçek zamanlı süre (ms),
-  // başarı riski ve onay modalinde gösterilecek metinler üretir.
+  // Her işlem tipi için tek yerden: maliyet, oyun-içi süre (saat), o sürenin
+  // karşılığı olan GERÇEK bekleme süresi (ms), başarı riski ve onay
+  // modalinde gösterilecek metinler üretir. Oyun-içi süre en fazla 2 saate
+  // kadar çıkar (en ağır tamir hariç); gerçek bekleme de buna orantılıdır.
   var TransactionManager = {
 
     skillLevel: function(xp){ return clamp(1 + Math.floor(xp/SKILL_XP_PER_LEVEL), 1, 10); },
+
+    // oyun-içi saat -> gerçekten beklenecek milisaniye. 1 saat ≈ 6 sn,
+    // en uzun işlemler (5-6 saat) yaklaşık 30-38 sn gerçek bekleme tutar.
+    hoursToRealMs: function(hours){ return clamp(Math.round(hours*6000), 3000, 45000); },
+    hoursLabel: function(hours){
+      if(hours < 1) return '≈ ' + Math.round(hours*60) + ' dakika';
+      if(hours <= 1) return '≈ 1 saat';
+      return '≈ ' + (Math.round(hours*10)/10) + ' saat';
+    },
 
     // --- Ekspertiz ---
     inspection: function(player, item){
       var lvl = this.skillLevel(player.skills.ekspertiz);
       var discount = clamp(lvl*0.03, 0, 0.4);
       var cost = Math.max(MIN_INSPECT, Math.round(item.askingPrice*INSPECT_RATE*(1-discount)));
+      var hours = 1;
       return {
         type:'INSPECT',
         title:'Ekspertiz Yaptır',
         message: item.title + ' için bağımsız ekspertiz raporu istiyorsun.',
         cost: cost,
-        durationMs: 1400,
-        durationLabel:'≈ 2 saat',
+        durationMs: this.hoursToRealMs(hours),
+        durationLabel: this.hoursLabel(hours),
         riskLabel:'Risksiz — rapor her zaman doğru çıkar.',
-        confirmLabel:'Ekspertize Gönder'
+        confirmLabel:'Ekspertize Gönder',
+        phases:['Randevu alınıyor…','Araç/arsa yerinde inceleniyor…','Rapor yazılıyor…']
       };
     },
 
     // --- Satın alma ---
     purchase: function(player, item){
       var isDukkan = item.category==='dukkan';
+      var hours = isDukkan ? 2 : 1.5;
       return {
         type:'BUY',
         title: isDukkan ? 'Devren Satın Al' : 'Satın Al',
         message: item.title + ' için satış sözleşmesi imzalanacak.',
         cost: item.askingPrice,
-        durationMs: isDukkan ? 2200 : 1200,
-        durationLabel: isDukkan ? '≈ 1 gün (devir işlemleri)' : '≈ 3 saat (noter/sözleşme)',
+        durationMs: this.hoursToRealMs(hours),
+        durationLabel: isDukkan ? (this.hoursLabel(hours) + ' (devir işlemleri)') : (this.hoursLabel(hours) + ' (noter/sözleşme)'),
         riskLabel:'Risksiz — fiyat üzerinde anlaşıldı.',
-        confirmLabel:'Satın Al, Öde'
+        confirmLabel:'Satın Al, Öde',
+        phases: isDukkan
+          ? ['Devir sözleşmesi hazırlanıyor…','Vergi dairesi işlemleri yürütülüyor…','Anahtar teslimi yapılıyor…']
+          : ['Sözleşme hazırlanıyor…','Ödeme bankaya iletiliyor…','Tapu/ruhsat devri yapılıyor…']
       };
     },
 
@@ -495,16 +554,18 @@
         ? (0.97 + 0.5*(0.18 + lvl*0.01))
         : (0.9 + 0.5*(0.2 + lvl*0.01));
       var estPrice = Math.round(value*negotiation);
+      var hours = viaShop ? 0.5 : 1.5;
       return {
         type: viaShop ? 'SELL_SHOP' : 'SELL',
         title: 'Satış Yap',
         message: item.title + ' için alıcı ile pazarlık kapanıyor.',
         cost: 0,
         estPrice: estPrice,
-        durationMs: viaShop ? 900 : 1300,
-        durationLabel: viaShop ? '≈ 1 saat' : '≈ 4 saat (alıcı ile görüşme)',
+        durationMs: this.hoursToRealMs(hours),
+        durationLabel: viaShop ? this.hoursLabel(hours) : (this.hoursLabel(hours) + ' (alıcı ile görüşme)'),
         riskLabel:'Fiyat, pazarlık becerine göre ' + fmt(Math.round(value*0.9)) + ' – ' + fmt(Math.round(value*1.15)) + ' arası oluşur.',
-        confirmLabel:'Satışı Onayla'
+        confirmLabel:'Satışı Onayla',
+        phases:['Alıcı ile görüşülüyor…','Pazarlık yapılıyor…','El sıkışılıyor…']
       };
     },
 
@@ -512,16 +573,18 @@
     repair: function(player, item, fault, usta, usesPart){
       var cost = Math.round(fault.repairCost * usta.priceMult * (usesPart ? 0.6 : 1));
       var success = clamp(usta.baseSuccess - (fault.heavy ? usta.heavyPenalty : 0), 0.1, 0.99);
+      var hours = usta.hours * (fault.heavy ? 1.6 : 1);
       return {
         type:'REPAIR',
         title: usta.name + ' ile Tamir',
         message: item.title + ' üzerindeki "' + fault.label + '" arızası için iş verilecek.',
         cost: cost,
-        durationMs: usta.durationMs,
-        durationLabel: usta.id==='mahalle' ? '≈ 3 saat' : usta.id==='bilinen' ? '≈ 6 saat' : '≈ 1 gün',
+        durationMs: this.hoursToRealMs(hours),
+        durationLabel: this.hoursLabel(hours),
         riskLabel:'Başarı ihtimali %' + Math.round(success*100) + '. Başarısız olursa ücret yine de ödenir.',
         successChance: success,
-        confirmLabel:'Ustaya Ver'
+        confirmLabel:'Ustaya Ver',
+        phases:['Arıza tespiti yapılıyor…','Parça söküldü…','Yeni parça monte ediliyor…','Test sürüşü yapılıyor…']
       };
     },
 
@@ -529,70 +592,80 @@
     selfRepair: function(player, item, fault){
       var lvl = this.skillLevel(player.skills.tamir);
       var success = clamp(0.35 + lvl*0.06 - (fault.heavy ? 0.25 : 0), 0.15, 0.95);
+      var hours = clamp(2.5 - lvl*0.15, 0.8, 2.5) * (fault.heavy ? 1.4 : 1);
       return {
         type:'SELF_REPAIR',
         title:'Kendin Yap',
         message: item.title + ' üzerindeki "' + fault.label + '" arızasını kendin tamir edeceksin. İşçilik bedava, sadece parça riske girer.',
         cost: 0,
-        durationMs: clamp(1700 - lvl*90, 700, 1700),
-        durationLabel:'≈ 5 saat (deneyimine göre değişir)',
+        durationMs: this.hoursToRealMs(hours),
+        durationLabel: this.hoursLabel(hours) + ' (deneyimine göre değişir)',
         riskLabel:'Başarı ihtimali %' + Math.round(success*100) + '. Başarısız olursan parça harcanır.',
         successChance: success,
-        confirmLabel:'Kolları Sıva'
+        confirmLabel:'Kolları Sıva',
+        phases:['Kaputu açtın…','Sökme işlemine başladın…','Elinden geldiğince monte ediyorsun…']
       };
     },
 
     // --- Parça alımı ---
     buyPart: function(player, brand, marketEntry){
+      var hours = 0.6;
       return {
         type:'BUY_PART',
         title:'Yedek Parça Al',
         message: brand + ' için "' + marketEntry.name + '" satın alınacak.',
         cost: marketEntry.price,
-        durationMs: 700,
-        durationLabel:'≈ 1 saat (tedarikçiden teslim)',
+        durationMs: this.hoursToRealMs(hours),
+        durationLabel: this.hoursLabel(hours) + ' (tedarikçiden teslim)',
         riskLabel:'Risksiz.',
-        confirmLabel:'Satın Al'
+        confirmLabel:'Satın Al',
+        phases:['Tedarikçi aranıyor…','Parça kargoya veriliyor…','Parça teslim alınıyor…']
       };
     },
 
     // --- Dükkan masrafı ---
     shopUpgrade: function(player, shop, opt){
+      var hours = 2;
       return {
         type:'SHOP_UPGRADE',
         title: opt.name,
         message: shop.title + ' için "' + opt.name + '" masrafı yapılacak. ' + opt.desc,
         cost: opt.cost,
-        durationMs: 1800,
-        durationLabel:'≈ 1 gün (usta çalışması)',
+        durationMs: this.hoursToRealMs(hours),
+        durationLabel: this.hoursLabel(hours) + ' (usta çalışması)',
         riskLabel:'Risksiz — kalıcı iyileştirme.',
-        confirmLabel:'Masrafı Onayla'
+        confirmLabel:'Masrafı Onayla',
+        phases:['Ustalar çağırıldı…','Malzeme getirtiliyor…','İşçilik tamamlanıyor…']
       };
     },
 
     // --- Kiracı kabul ---
     acceptTenant: function(player, shop){
+      var hours = 1.5;
       return {
         type:'ACCEPT_TENANT',
         title:'Kiracıya Ver',
         message: shop.tenantCandidate.name + ' ile kira sözleşmesi imzalanacak. Vitrindeki mevcut ürünler geri garaja alınır.',
         cost: 0,
-        durationMs: 1200,
-        durationLabel:'≈ 1 gün (sözleşme)',
+        durationMs: this.hoursToRealMs(hours),
+        durationLabel: this.hoursLabel(hours) + ' (sözleşme)',
         riskLabel:'Kiracı memnuniyeti düşerse kira ödemeyebilir ya da çıkabilir.',
-        confirmLabel:'Sözleşmeyi İmzala'
+        confirmLabel:'Sözleşmeyi İmzala',
+        phases:['Kira sözleşmesi yazılıyor…','Noterde imzalanıyor…','Anahtar teslim ediliyor…']
       };
     },
 
     // --- Kiracı tahliye ---
     evictTenant: function(player, shop){
+      var hours = 1;
       return {
         type:'EVICT_TENANT',
         title:'Kiracıyı Tahliye Et',
         message: shop.tenant.name + ' isimli kiracın tahliye edilecek. Bu işlem geri alınamaz.',
         cost: 0,
-        durationMs: 1000,
-        durationLabel:'≈ birkaç saat',
+        durationMs: this.hoursToRealMs(hours),
+        durationLabel: this.hoursLabel(hours),
+        phases:['İhtarname gönderiliyor…','Eşyalar taşınıyor…','Anahtar teslim alınıyor…'],
         riskLabel:'Geri dönüşü yoktur.',
         confirmLabel:'Tahliye Et',
         danger:true
@@ -600,16 +673,18 @@
     },
 
     nextDay: function(player){
+      var hours = 0.8;
       return {
         type:'NEXT_DAY',
         title:'Sonraki Güne Geç',
         message:'Gün kapanacak: kiralar tahsil edilir/ödenir, vitrindeki ürünler için müşteri denemesi yapılır ve yeni ilanlar gelir.',
         cost:0,
-        durationMs:1600,
+        durationMs: this.hoursToRealMs(hours),
         durationLabel:'≈ 1 gece',
         riskLabel:'',
         confirmLabel:'Günü Kapat',
-        skipConfirm:true
+        skipConfirm:true,
+        phases:['Gün kapanıyor…','Kiralar hesaplanıyor…','Yeni ilanlar toplanıyor…']
       };
     }
   };
@@ -676,53 +751,90 @@
   // =====================================================================
   //  İŞLEM SÜRE YÖNETİCİSİ — "işlem sürüyor" durumunu ve gecikmeyi yönetir
   // =====================================================================
+  // İşlem sürerken oyuncu KİLİTLENMEZ: sekmeler arasında gezinip başka
+  // ilanlara bakabilir, mesajlaşabilir — sadece yeni bir ücretli işlem
+  // başlatamaz (perform() bunu ayrıca kontrol eder). Bekleme sırasında
+  // alt bar bir ilerleme noktası gösterir, üstte de akan bir "olan biten"
+  // bildirimiyle oyalanacak içerik sunulur.
   var OperationManager = {
     active: false,
     root: null,
+    currentDesc: null,
     init: function(){ this.root = document.getElementById('busyRoot'); },
     isBusy: function(){ return this.active; },
     run: function(desc, effectFn){
       if(this.active) return;
       this.active = true;
+      this.currentDesc = desc;
       var self = this;
       var total = desc.durationMs;
       var startedAt = Date.now();
+      var phases = desc.phases && desc.phases.length ? desc.phases : [desc.title + ' işleniyor…'];
 
       var bar = document.createElement('div');
       bar.className = 'busybar';
       var spin = document.createElement('div'); spin.className = 'spin';
-      var label = document.createElement('div'); label.className = 'bblabel';
-      label.textContent = desc.title + ' işleniyor… (' + (desc.durationLabel||'') + ')';
+      var textWrap = document.createElement('div'); textWrap.className = 'bblabel';
+      var label = document.createElement('div');
+      label.textContent = phases[0];
+      var subLabel = document.createElement('div');
+      subLabel.style.fontSize = '0.68rem';
+      subLabel.style.opacity = '0.75';
+      subLabel.textContent = desc.title + ' — kalan süre hesaplanıyor…';
+      textWrap.appendChild(label);
+      textWrap.appendChild(subLabel);
       var track = document.createElement('div'); track.className = 'bbtrack';
       var fill = document.createElement('div'); fill.className = 'bbfill';
       track.appendChild(fill);
-      bar.appendChild(spin); bar.appendChild(label); bar.appendChild(track);
+      bar.appendChild(spin); bar.appendChild(textWrap); bar.appendChild(track);
       this.root.innerHTML = '';
       this.root.appendChild(bar);
       requestAnimationFrame(function(){ bar.classList.add('show'); });
-      renderBottomBarLock(true);
+      markNavBusy(true);
 
+      var phaseIdx = 0;
       var iv = setInterval(function(){
-        var pct = clamp((Date.now()-startedAt)/total*100, 0, 100);
+        var elapsed = Date.now()-startedAt;
+        var pct = clamp(elapsed/total*100, 0, 100);
         fill.style.width = pct + '%';
-      }, 60);
+        var remainSec = Math.max(0, Math.ceil((total-elapsed)/1000));
+        subLabel.textContent = desc.title + ' — kalan ≈ ' + remainSec + ' sn (oyun-içi ' + (desc.durationLabel||'') + ')';
+        var wantIdx = Math.min(phases.length-1, Math.floor((elapsed/total) * phases.length));
+        if(wantIdx !== phaseIdx){ phaseIdx = wantIdx; label.textContent = phases[phaseIdx]; }
+      }, 200);
+
+      // Bekleme sırasında oyalanacak kozmetik "piyasa haberi" bildirimleri.
+      // İşlem yeterince uzunsa 1-2 tanesi rastgele anlarda beliriyor.
+      var ambientTimers = [];
+      if(total >= 6000){
+        var ambientCount = total >= 18000 ? 2 : 1;
+        for(var a=0; a<ambientCount; a++){
+          var when = total * (0.3 + Math.random()*0.55);
+          ambientTimers.push(setTimeout(function(){
+            toast('📰 ' + pick(AMBIENT_EVENTS));
+          }, when));
+        }
+      }
 
       setTimeout(function(){
         clearInterval(iv);
+        ambientTimers.forEach(clearTimeout);
         bar.classList.remove('show');
         setTimeout(function(){ if(bar.parentNode) bar.parentNode.removeChild(bar); }, 200);
         self.active = false;
-        renderBottomBarLock(false);
+        self.currentDesc = null;
+        markNavBusy(false);
         effectFn();
       }, total);
     }
   };
 
-  function renderBottomBarLock(locked){
+  // Bekleme sırasında sekmeler ve ilan gezintisi tamamen açık kalır —
+  // sadece alt barda küçük bir "arka planda işlem var" işareti gösterilir.
+  function markNavBusy(busy){
     var nav = document.getElementById('bottombar');
     if(!nav) return;
-    nav.style.opacity = locked ? '0.55' : '1';
-    nav.style.pointerEvents = locked ? 'none' : 'auto';
+    nav.classList.toggle('nav-busy', busy);
   }
 
   // =====================================================================
@@ -1167,7 +1279,7 @@
       var value = item.currentValue();
       var iLvl = player.skillLevel('isletme');
       var negotiation = 0.97 + Math.random()*(0.18 + iLvl*0.01);
-      var salePrice = Math.round(value*negotiation);
+      var salePrice = Math.round(value*negotiation*(shop.saleBonus||1));
       player.earn(salePrice);
       var profit = salePrice - item.purchasePrice;
       shop.slots = shop.slots.filter(function(id){return id!==itemId;});
@@ -1189,7 +1301,7 @@
     var value = item.currentValue();
     var iLvl = player.skillLevel('isletme');
     var negotiation = 0.97 + Math.random()*(0.18 + iLvl*0.01);
-    var salePrice = Math.round(value*negotiation);
+    var salePrice = Math.round(value*negotiation*(shop.saleBonus||1));
     player.earn(salePrice);
     var profit = salePrice - item.purchasePrice;
     shop.slots = shop.slots.filter(function(id){return id!==itemId;});
@@ -1225,6 +1337,8 @@
       if(upgradeId==='tadilat') shop.capacity += 1;
       else if(upgradeId==='reklam') shop.passiveBonus += 0.05;
       else if(upgradeId==='demirbas') shop.rentMult *= 0.9;
+      else if(upgradeId==='sigorta') shop.satisfactionGuard = true;
+      else if(upgradeId==='egitim') shop.saleBonus = (shop.saleBonus||1) * 1.06;
       addLog(shop.title + ' için masraf yapıldı: ' + opt.name + ' — ' + fmt(desc.cost), 'neg');
       toast(opt.name + ' tamamlandı.');
       render();
@@ -1292,7 +1406,13 @@
       onReject:function(shop){ shop.tenant.satisfaction = clamp(shop.tenant.satisfaction-15,0,100); } },
     { text:"Sözleşmeyi uzatmak istiyorum, her şey yolunda, teşekkürler.",
       onAccept:function(shop){ shop.tenant.satisfaction = clamp(shop.tenant.satisfaction+5,0,100); },
-      onReject:function(shop){} }
+      onReject:function(shop){} },
+    { text:"Vitrin camını yeniletmek istiyorum, 2.500 ₺ masraf çıkar.", cost:2500,
+      onAccept:function(shop){ player.spend(2500); shop.tenant.satisfaction = clamp(shop.tenant.satisfaction+8,0,100); },
+      onReject:function(shop){ shop.tenant.satisfaction = clamp(shop.tenant.satisfaction-8,0,100); } },
+    { text:"İşler iyi gidiyor, ek bir ay kira avans ödemek istiyorum.",
+      onAccept:function(shop){ player.earn(shop.tenant.rent); shop.tenant.satisfaction = clamp(shop.tenant.satisfaction+6,0,100); },
+      onReject:function(shop){ shop.tenant.satisfaction = clamp(shop.tenant.satisfaction-4,0,100); } }
   ];
 
   function resolveTenantRequest(shopId, accept){
@@ -1335,7 +1455,7 @@
             addLog(t.name + ' kirasını ödedi: ' + fmt(t.rent), 'pos');
           } else {
             addLog(t.name + ' bu ay kira ödemedi.', 'neg');
-            t.satisfaction = clamp(t.satisfaction - 5, 0, 100);
+            t.satisfaction = clamp(t.satisfaction - (shop.satisfactionGuard ? 2 : 5), 0, 100);
           }
           if(!t.pendingRequest && Math.random() < 0.20){
             t.pendingRequest = pick(TENANT_REQUESTS);
@@ -2167,7 +2287,8 @@
   // =====================================================================
   document.querySelectorAll('#bottombar button').forEach(function(b){
     b.onclick = function(){
-      if(OperationManager.isBusy()){ toast('İşlem sürerken sekme değiştiremezsin.'); return; }
+      // İşlem sürerken bile sekmeler arasında serbestçe gezinilebilir —
+      // sadece yeni ücretli işlem başlatmak engellenir (perform() içinde).
       state.tab = b.dataset.tab;
       state.openShopId = null;
       state.openDetailId = null;
