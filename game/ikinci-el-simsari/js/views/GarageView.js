@@ -55,9 +55,10 @@ export var GarageView = {
       else statusParts.push(unfixed.length + ' bilinen sorun (tamiri yok, sadece değeri düşürür).');
       var ownerShop = item.shopId ? state.shops.find(function(s){return s.id===item.shopId;}) : null;
       if(ownerShop) statusParts.push('Vitrinde: ' + ownerShop.title);
-      if(item.forSale) statusParts.push('Satışta (' + item.daysListed + ' gündür, ' + fmt(item.listedPrice) + ')');
+      if(item.forSale) statusParts.push('Satışta (' + item.daysListed + ' gündür, ' + fmt(item.listedPrice) + ')' + (item.boosted ? ' · öne çıkarılmış' : ''));
       if(item.category==='arsa' && item.hasHouse) statusParts.push('Üzerinde ev var.');
       else if(item.category==='arsa' && item.underConstruction) statusParts.push('İnşaat sürüyor (' + item.constructionDaysLeft + ' gün kaldı).');
+      if(item.category==='araba') statusParts.push(item.insured ? 'Kaskolu.' : 'Kaskosuz.');
       status.textContent = statusParts.join(' ');
       card.appendChild(status);
 
@@ -119,6 +120,22 @@ export var GarageView = {
         buildBtn.disabled = OperationManager.isBusy();
         buildBtn.onclick = function(){ Game.doStartConstruction(item.id); };
         row.appendChild(buildBtn);
+      }
+      if(item.forSale && !item.boosted){
+        var boostBtn = document.createElement('button');
+        boostBtn.className = 'btn-orange btn-sm';
+        boostBtn.textContent = 'Öne Çıkar';
+        boostBtn.disabled = OperationManager.isBusy();
+        boostBtn.onclick = function(){ Game.doBoostListing(item.id); };
+        row.appendChild(boostBtn);
+      }
+      if(item.category==='araba'){
+        var kaskoBtn = document.createElement('button');
+        kaskoBtn.className = item.insured ? 'btn-ghost btn-sm' : 'btn-navy btn-sm';
+        kaskoBtn.textContent = item.insured ? 'Kaskoyu İptal Et' : 'Kasko Yaptır';
+        kaskoBtn.disabled = OperationManager.isBusy();
+        kaskoBtn.onclick = function(){ Game.doToggleKasko(item.id); };
+        row.appendChild(kaskoBtn);
       }
       card.appendChild(row);
 

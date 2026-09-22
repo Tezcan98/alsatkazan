@@ -1,5 +1,9 @@
 import { clamp, fmt } from '../utils.js';
-import { INSPECT_RATE, MIN_INSPECT, SKILL_XP_PER_LEVEL, CONSTRUCTION_COST_PER_M2 } from '../data/constants.js';
+import {
+  INSPECT_RATE, MIN_INSPECT, SKILL_XP_PER_LEVEL, CONSTRUCTION_COST_PER_M2,
+  INSPECT_MISS_CHANCE, FULL_INSPECT_RATE, MIN_FULL_INSPECT,
+  BOOST_COST, BOOST_DAYS, KASKO_DAILY_RATE, KASKO_MIN_DAILY
+} from '../data/constants.js';
 
 // =====================================================================
 //  İŞLEM YÖNETİCİSİ — tüm ücret / süre / risk hesapları burada
@@ -21,12 +25,13 @@ export var TransactionManager = {
     return '≈ ' + (Math.round(hours*10)/10) + ' saat';
   },
 
-  // --- Ekspertiz ---
+  // --- Ekspertiz (ucuz ama bazen bir arızayı kaçırabilir) ---
   inspection: function(player, item){
     var lvl = this.skillLevel(player.skills.ekspertiz);
     var discount = clamp(lvl*0.03, 0, 0.4);
     var cost = Math.max(MIN_INSPECT, Math.round(item.askingPrice*INSPECT_RATE*(1-discount)));
     var hours = 1;
+    var missChance = clamp(INSPECT_MISS_CHANCE - lvl*0.01, 0.03, INSPECT_MISS_CHANCE);
     return {
       type:'INSPECT',
       title:'Ekspertiz Yaptır',
@@ -34,9 +39,62 @@ export var TransactionManager = {
       cost: cost,
       durationMs: this.hoursToRealMs(hours),
       durationLabel: this.hoursLabel(hours),
-      riskLabel:'Risksiz — rapor her zaman doğru çıkar.',
+      riskLabel:'Standart ekspertiz — her arızayı bulma ihtimali %' + Math.round((1-missChance)*100) + '. %100 garantili sonuç için TRAMER Tam Rapor kullan.',
       confirmLabel:'Ekspertize Gönder',
+      missChance: missChance,
       phases:['Randevu alınıyor…','Araç/arsa yerinde inceleniyor…','Rapor yazılıyor…']
+    };
+  },
+
+  // --- TRAMER Tam Rapor (pahalı ama hiçbir şeyi kaçırmaz) ---
+  fullInspection: function(player, item){
+    var cost = Math.max(MIN_FULL_INSPECT, Math.round(item.askingPrice*FULL_INSPECT_RATE));
+    var hours = 2;
+    return {
+      type:'FULL_INSPECT',
+      title:'TRAMER Tam Rapor',
+      message: item.title + ' için resmi kayıt sorgusu dahil eksiksiz bir ekspertiz raporu istiyorsun.',
+      cost: cost,
+      durationMs: this.hoursToRealMs(hours),
+      durationLabel: this.hoursLabel(hours),
+      riskLabel:'Risksiz — hiçbir arıza gözden kaçmaz, %100 doğru sonuç.',
+      confirmLabel:'Tam Rapor İste',
+      missChance: 0,
+      phases:['Şasi/resmi kayıtlar sorgulanıyor…','Cihazla boya/değişen ölçümü yapılıyor…','Rapor onaylanıyor…']
+    };
+  },
+
+  // --- İlan Doping (Öne Çıkar) ---
+  boostListing: function(player, item){
+    var hours = 0.5;
+    return {
+      type:'BOOST_LISTING',
+      title:'İlanı Öne Çıkar',
+      message: item.title + ' ilanı ' + BOOST_DAYS + ' gün boyunca öne çıkarılacak, alıcı ilgisi artacak.',
+      cost: BOOST_COST,
+      durationMs: this.hoursToRealMs(hours),
+      durationLabel: this.hoursLabel(hours),
+      riskLabel:'Risksiz — ' + BOOST_DAYS + ' gün boyunca alıcı bulma şansını artırır.',
+      confirmLabel:'Öne Çıkar',
+      phases:['Ödeme alınıyor…','İlan vitrine taşınıyor…']
+    };
+  },
+
+  // --- Kasko Sigortası bağlat/iptal (ücretsiz işlem, anında) ---
+  toggleKasko: function(player, item){
+    return {
+      type:'TOGGLE_KASKO',
+      title: item.insured ? 'Kaskoyu İptal Et' : 'Kasko Yaptır',
+      message: item.insured
+        ? item.title + ' üzerindeki kasko sigortası iptal edilecek.'
+        : item.title + ' için kasko sigortası başlatılacak, günlük küçük bir prim kesilecek.',
+      cost: 0,
+      durationMs: 1500,
+      durationLabel:'anında',
+      riskLabel: item.insured ? 'İptal sonrası kaza/kazık riskine karşı korumasız kalırsın.' : 'Kaza ya da gizli arıza çıkarsa zararın büyük kısmını karşılar.',
+      confirmLabel: item.insured ? 'İptal Et' : 'Kasko Yaptır',
+      skipConfirm:false,
+      phases:['İşleniyor…']
     };
   },
 

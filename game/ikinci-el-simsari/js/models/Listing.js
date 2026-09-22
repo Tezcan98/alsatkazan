@@ -18,6 +18,11 @@ export function Listing(props){
   this.pendingOffer = null;
   this.favorite = false;
   this.daysOwned = 0;
+  // ilan doping (bkz. GameController.doBoostListing)
+  this.boosted = false;
+  this.boostDaysLeft = 0;
+  // ekspertiz kalitesi: 'none' | 'normal' (kaçırma riski var) | 'full' (TRAMER, %100)
+  this.inspectionQuality = 'none';
 }
 Listing.prototype.currentValue = function(){
   var remainingLoss = this.faults.filter(function(f){return !f.fixed;}).reduce(function(s,f){return s+f.loss;},0);
@@ -30,13 +35,15 @@ Listing.prototype.specRows = function(){ return []; };
 
 export function Car(base){
   Listing.call(this, Object.assign({category:'araba'}, base));
+  // kasko sigortası (bkz. GameController.doToggleKasko)
+  this.insured = false;
 }
 Car.prototype = Object.create(Listing.prototype);
 Car.prototype.thumb = function(){ return IMG.carThumb(this); };
 Car.prototype.hero = function(){ return IMG.carHero(this); };
 Car.prototype.imgFilter = function(){ return IMG.carFilter(this); };
 Car.prototype.specRows = function(){
-  return [
+  var rows = [
     ['Yıl', this.year],
     ['KM', this.km.toLocaleString('tr-TR')],
     ['Vites', this.trans],
@@ -45,6 +52,8 @@ Car.prototype.specRows = function(){
     ['Renk', this.color],
     ['Konum', this.location]
   ];
+  if(this.owned) rows.push(['Kasko', this.insured ? 'Sigortalı' : 'Sigortasız']);
+  return rows;
 };
 Car.prototype.metaLine = function(){ return this.km.toLocaleString('tr-TR') + ' km · ' + this.trans + ' · ' + this.location; };
 

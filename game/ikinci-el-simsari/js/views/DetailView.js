@@ -102,7 +102,10 @@ export var DetailView = {
     body.appendChild(descNote);
 
     if(item.inspected){
-      if(item.faults.length===0){
+      // Sahip değilsen ekspertizin kaçırdığı (hidden) arızalar gösterilmez —
+      // bunlar satın aldıktan sonra "kazık" olarak ortaya çıkabilir.
+      var visibleFaults = item.owned ? item.faults : item.faults.filter(function(f){return !f.hidden;});
+      if(visibleFaults.length===0){
         var ok = document.createElement('div');
         ok.className = 'desc-note';
         ok.style.fontStyle='normal';
@@ -111,13 +114,19 @@ export var DetailView = {
       } else {
         var ul = document.createElement('ul');
         ul.className = 'fault-list';
-        item.faults.forEach(function(f){
+        visibleFaults.forEach(function(f){
           var li = document.createElement('li');
           li.className = f.fixed ? 'fixed' : '';
           li.textContent = f.label + (item.category==='araba' ? (f.fixed ? ' — tamir edildi' : ' (tamiri ~' + fmt(f.repairCost) + ')') : ' (değer kaybı ~' + fmt(f.loss) + ')');
           ul.appendChild(li);
         });
         body.appendChild(ul);
+      }
+      if(!item.owned && item.inspectionQuality==='normal'){
+        var qnote = document.createElement('div');
+        qnote.className = 'desc-note';
+        qnote.textContent = 'Standart ekspertiz — bir şeyler gözden kaçmış olabilir. Garantili sonuç için TRAMER Tam Rapor iste.';
+        body.appendChild(qnote);
       }
     }
 
@@ -130,8 +139,16 @@ export var DetailView = {
         insBtn.className = 'btn-ghost';
         insBtn.textContent = 'Ekspertiz Yaptır (' + fmt(insDesc.cost) + ')';
         insBtn.disabled = busy;
-        insBtn.onclick = function(){ Game.doInspect(item.id); };
+        insBtn.onclick = function(){ Game.doInspect(item.id, false); };
         actions.appendChild(insBtn);
+
+        var fullDesc = TransactionManager.fullInspection(player, item);
+        var fullBtn = document.createElement('button');
+        fullBtn.className = 'btn-ghost';
+        fullBtn.textContent = 'TRAMER Tam Rapor (' + fmt(fullDesc.cost) + ')';
+        fullBtn.disabled = busy;
+        fullBtn.onclick = function(){ Game.doInspect(item.id, true); };
+        actions.appendChild(fullBtn);
       }
       var buyBtn = document.createElement('button');
       buyBtn.className = 'btn-orange';
@@ -145,10 +162,20 @@ export var DetailView = {
       unlistBtn.textContent = 'Satıştan Kaldır';
       unlistBtn.onclick = function(){ Game.doUnlist(item.id); };
       actions.appendChild(unlistBtn);
+      if(!item.boosted){
+        var boostDesc = TransactionManager.boostListing(player, item);
+        var boostBtn = document.createElement('button');
+        boostBtn.className = 'btn-orange';
+        boostBtn.textContent = 'İlanı Öne Çıkar (' + fmt(boostDesc.cost) + ')';
+        boostBtn.disabled = busy || player.balance < boostDesc.cost;
+        boostBtn.onclick = function(){ Game.doBoostListing(item.id); };
+        actions.appendChild(boostBtn);
+      }
       var note = document.createElement('div');
       note.className = 'desc-note';
       note.style.width = '100%';
-      note.textContent = 'İlanda: ' + fmt(item.listedPrice) + ' — ' + item.daysListed + ' gündür satışta, alıcı bekleniyor.';
+      note.textContent = 'İlanda: ' + fmt(item.listedPrice) + ' — ' + item.daysListed + ' gündür satışta, alıcı bekleniyor.' +
+        (item.boosted ? ' Öne çıkarılmış (' + item.boostDaysLeft + ' gün kaldı).' : '');
       actions.appendChild(note);
     } else if(item.underConstruction){
       var constrNote = document.createElement('div');
@@ -186,6 +213,23 @@ export var DetailView = {
         constrCard.appendChild(constrBtn);
       }
       body.appendChild(constrCard);
+    }
+
+    if(item.owned && item.category==='araba'){
+      var kaskoCard = document.createElement('div');
+      kaskoCard.className = 'card';
+      kaskoCard.style.marginBottom = '16px';
+      var kaskoDesc = TransactionManager.toggleKasko(player, item);
+      kaskoCard.innerHTML = '<div class="kicker">Kasko Sigortası</div><div style="margin-top:4px;font-size:0.85rem;">' +
+        (item.insured ? 'Sigortalı — kaza ya da gizli arıza çıkarsa zararın büyük kısmı karşılanır.' : 'Sigortasız — kaza ya da gizli arıza tüm zararı sana ait olur.') + '</div>';
+      var kaskoBtn = document.createElement('button');
+      kaskoBtn.className = item.insured ? 'btn-ghost btn-sm' : 'btn-orange btn-sm';
+      kaskoBtn.style.marginTop = '8px';
+      kaskoBtn.textContent = item.insured ? 'Kaskoyu İptal Et' : 'Kasko Yaptır';
+      kaskoBtn.disabled = busy;
+      kaskoBtn.onclick = function(){ Game.doToggleKasko(item.id); };
+      kaskoCard.appendChild(kaskoBtn);
+      body.appendChild(kaskoCard);
     }
 
     if(item.owned && item.pendingOffer){

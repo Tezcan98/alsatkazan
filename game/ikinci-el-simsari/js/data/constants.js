@@ -266,3 +266,31 @@ export const STALE_DEPRECIATION_RATE = 0.004; // günlük ~%0.4
 export const DEAL_CHANCE = 0.45;
 export const DEAL_DISCOUNT_MIN = 0.18;
 export const DEAL_DISCOUNT_MAX = 0.34;
+
+// ---- Ekspertiz riski & TRAMER Tam Rapor ----
+// Ucuz ekspertiz bazen bir arızayı gözden kaçırabilir (gerçek hayattaki
+// gibi) — kaçırılan arıza satın alma sonrası "kazık" olarak ortaya çıkar.
+// Pahalı TRAMER usulü tam rapor hiçbir şeyi kaçırmaz.
+export const INSPECT_MISS_CHANCE = 0.16;
+export const FULL_INSPECT_RATE = 0.05; // askingPrice'ın yüzdesi
+export const MIN_FULL_INSPECT = sc(2500);
+
+// ---- İlan Doping (Öne Çıkar) ----
+// sahibinden.com'un imza özelliği: ücret karşılığında kendi ilanını öne
+// çıkarıp alıcı ilgisini geçici olarak artırırsın.
+export const BOOST_COST = sc(4000);
+export const BOOST_DAYS = 5;
+export const BOOST_ATTRACT_BONUS = 0.18;
+
+// ---- Kasko Sigortası ----
+// Sahip olunan araçlar için isteğe bağlı sigorta: günlük küçük bir prim
+// karşılığında kaza/kazık zararının büyük kısmını karşılar.
+export const KASKO_DAILY_RATE = 0.00045; // aracın güncel değerinin günlük oranı
+export const KASKO_MIN_DAILY = sc(35);
+export const KASKO_DEDUCTIBLE = sc(1800); // muafiyet — sigortalıyken kazada sadece bu ödenir
+export const KAZA_DAILY_CHANCE = 0.012;
+
+// ---- İtibar (Satıcı Puanı) ----
+// sahibinden'deki satıcı puanı gibi — satış geçmişine göre yıldız
+// hesaplanır, alıcı ilgisini ve pazarlık sonuçlarını hafifçe etkiler.
+export const REPUTATION_MAX_STARS = 5;

@@ -9,7 +9,9 @@ import {
   TENANT_NAMES, TENANT_BUSINESS_ARABA, TENANT_BUSINESS_ARSA,
   BUYER_NAMES, BUYER_DISCOUNT_LINES, PRICE_SCALE, LOAN_TIERS,
   CONSTRUCTION_COST_PER_M2, CONSTRUCTION_DAYS_MIN, CONSTRUCTION_DAYS_MAX, CONSTRUCTION_VALUE_MULT,
-  CAR_DAILY_HOLDING_COST, ARSA_DAILY_HOLDING_COST, STALE_LISTING_DAYS, STALE_DEPRECIATION_RATE
+  CAR_DAILY_HOLDING_COST, ARSA_DAILY_HOLDING_COST, STALE_LISTING_DAYS, STALE_DEPRECIATION_RATE,
+  BOOST_DAYS, BOOST_ATTRACT_BONUS, KASKO_DAILY_RATE, KASKO_MIN_DAILY, KASKO_DEDUCTIBLE, KAZA_DAILY_CHANCE,
+  FAULT_POOL_CAR, REPUTATION_MAX_STARS
 } from '../data/constants.js';
 import { ACHIEVEMENTS } from './achievements.js';
 
@@ -44,6 +46,9 @@ export var Game = {
   render: function(){ /* main.js tarafından değiştirilir */ },
   _loanRepaidCount: 0,
   _boughtDealCount: 0,
+  _kaskoCount: 0,
+  _boostCount: 0,
+  _fullInspectCount: 0,
 
   init: function(){
     ConfirmDialog.init();
@@ -56,6 +61,14 @@ export var Game = {
   addLog: function(msg, cls){
     this.state.log.unshift({msg:msg, cls:cls||""});
     if(this.state.log.length>50) this.state.log.pop();
+  },
+
+  // sahibinden'deki satıcı puanı gibi: satış geçmişine göre 1-5 yıldız.
+  // Alıcı ilgisini ve pazarlığı hafifçe etkiler (bkz. doNextDay).
+  reputationStars: function(){
+    var p = this.player;
+    var base = 3 + Math.min(1.5, p.totalSales*0.12) + (p.totalProfit>0 ? 0.5 : p.totalProfit<0 ? -0.5 : 0);
+    return clamp(Math.round(base*2)/2, 1, REPUTATION_MAX_STARS);
   },
 
   // Her önemli eylemden sonra çağrılır: henüz açılmamış ve şartı
@@ -97,16 +110,22 @@ export var Game = {
   // =====================================================================
   //  EYLEMLER
   // =====================================================================
-  doInspect: function(id){
+  doInspect: function(id, full){
     var self = this, state = this.state, player = this.player;
     var item = this.findAny(id);
     if(!item || item.inspected) return;
-    var desc = TransactionManager.inspection(player, item);
+    var desc = full ? TransactionManager.fullInspection(player, item) : TransactionManager.inspection(player, item);
     this.perform(desc, function(){
       player.spend(desc.cost);
       item.inspected = true;
-      self.addLog('Ekspertiz yaptırıldı: ' + item.title + ' — ' + fmt(desc.cost), 'neg');
-      player.addXp('ekspertiz', 25);
+      item.inspectionQuality = full ? 'full' : 'normal';
+      item.faults.forEach(function(f){ f.hidden = full ? false : (Math.random() < desc.missChance); });
+      var missedCount = item.faults.filter(function(f){return f.hidden;}).length;
+      self.addLog((full ? 'TRAMER tam rapor alındı' : 'Ekspertiz yaptırıldı') + ': ' + item.title + ' — ' + fmt(desc.cost), 'neg');
+      if(!full && missedCount>0) self.addLog('(Ekspertizci bir şeyi gözden kaçırmış olabilir — satın almadan emin olamazsın.)', '');
+      if(full) self._fullInspectCount += 1;
+      player.addXp('ekspertiz', full ? 35 : 25);
+      self.checkAchievements();
       self.render();
     });
   },
@@ -115,7 +134,10 @@ export var Game = {
     var self = this, state = this.state, player = this.player;
     var item = this.findListing(id);
     if(!item) return;
-    var wasInspected = item.inspected;
+    var priorQuality = item.inspectionQuality;
+    var hiddenLoss = priorQuality==='none'
+      ? item.faults.reduce(function(s,f){return s+f.loss;},0)
+      : item.faults.filter(function(f){return f.hidden;}).reduce(function(s,f){return s+f.loss;},0);
     var desc = TransactionManager.purchase(player, item);
     this.perform(desc, function(){
       var idx = state.listings.findIndex(function(l){return l.id===id;});
@@ -131,12 +153,13 @@ export var Game = {
         toast('Dükkan alındı, Kontrol Paneli → Dükkanlarım.');
       } else {
         item.inspected = true;
+        item.faults.forEach(function(f){ f.hidden = false; }); // artık sahibisin, her şeyi görürsün
         item.shopId = null;
         state.inventory.push(item);
         self.addLog('Satın alındı: ' + item.title + ' — ' + fmt(item.purchasePrice), 'neg');
         toast('Satın alındı, Garajım sekmesinde.');
         player.addXp('pazarlik', 3);
-        self.checkForKazik(item, wasInspected);
+        self.checkForKazik(item, hiddenLoss);
       }
       self.checkAchievements();
       state.openDetailId = null;
@@ -147,18 +170,16 @@ export var Game = {
   // Ekspertiz yaptırmadan alınan ürünlerde gizli arıza çıkarsa "kazık
   // yedin" olayı tetiklenir: Sabır seviyesi yükseldikçe zararın bir kısmı
   // telafi edilir (item.trueValue'ya geri eklenir) ve Sabır XP kazanılır.
-  checkForKazik: function(item, wasInspected){
-    if(wasInspected) return;
-    var totalLoss = item.faults.reduce(function(s,f){return s+f.loss;},0);
-    if(totalLoss < sc(15000)) return;
+  checkForKazik: function(item, hiddenLoss){
+    if(!hiddenLoss || hiddenLoss < sc(15000)) return;
     var player = this.player;
     var sabirLvl = player.skillLevel('sabir');
     var mitigation = clamp(sabirLvl*0.03, 0, 0.3);
-    var recovered = Math.round(totalLoss*mitigation);
+    var recovered = Math.round(hiddenLoss*mitigation);
     if(recovered>0) item.trueValue += recovered;
-    this.addLog('Kazık yedin! ' + item.title + ' üzerinde ' + fmt(totalLoss) + ' değerinde gizli arıza çıktı' + (recovered>0 ? ' (Sabır sayesinde ' + fmt(recovered) + ' telafi edildi)' : '') + '.', 'neg');
-    toast('Ekspertizsiz alım risklidir — kazık yedin!');
-    player.addXp('sabir', clamp(Math.round(totalLoss/sc(900)), 6, 35));
+    this.addLog('Kazık yedin! ' + item.title + ' üzerinde ' + fmt(hiddenLoss) + ' değerinde gizli arıza çıktı' + (recovered>0 ? ' (Sabır sayesinde ' + fmt(recovered) + ' telafi edildi)' : '') + '.', 'neg');
+    toast('Kazık yedin! Gizli arıza ortaya çıktı.');
+    player.addXp('sabir', clamp(Math.round(hiddenLoss/sc(900)), 6, 35));
   },
 
   askQuestion: function(id, key){
@@ -296,6 +317,41 @@ export var Game = {
     item.pendingOffer = null;
     this.addLog(item.title + ' satıştan kaldırıldı.');
     this.render();
+  },
+
+  // ---- İlan Doping — sahibinden'in imza özelliği ----
+  doBoostListing: function(id){
+    var self = this, player = this.player;
+    var item = this.findInv(id);
+    if(!item || !item.forSale) return;
+    if(item.boosted){ toast('Bu ilan zaten öne çıkarılmış.'); return; }
+    var desc = TransactionManager.boostListing(player, item);
+    this.perform(desc, function(){
+      player.spend(desc.cost);
+      item.boosted = true;
+      item.boostDaysLeft = BOOST_DAYS;
+      self.addLog(item.title + ' öne çıkarıldı — ' + fmt(desc.cost) + ' (' + BOOST_DAYS + ' gün)', 'neg');
+      toast('İlan öne çıkarıldı!');
+      self._boostCount += 1;
+      self.checkAchievements();
+      self.render();
+    });
+  },
+
+  // ---- Kasko sigortası aç/kapat ----
+  doToggleKasko: function(id){
+    var self = this, player = this.player;
+    var item = this.findInv(id);
+    if(!item || item.category!=='araba') return;
+    var desc = TransactionManager.toggleKasko(player, item);
+    this.perform(desc, function(){
+      item.insured = !item.insured;
+      self.addLog(item.title + ' — kasko ' + (item.insured ? 'başlatıldı' : 'iptal edildi'), item.insured ? 'neg' : '');
+      toast(item.insured ? 'Kasko aktif.' : 'Kasko iptal edildi.');
+      if(item.insured) self._kaskoCount += 1;
+      self.checkAchievements();
+      self.render();
+    });
   },
 
   // ---- Arsaya ev dikme ----
@@ -601,11 +657,40 @@ export var Game = {
         if(item.forSale && item.daysListed > STALE_LISTING_DAYS){
           item.trueValue = Math.max(1000, Math.round(item.trueValue * (1-STALE_DEPRECIATION_RATE)));
         }
+        // ilan doping süresi azalır
+        if(item.boosted){
+          item.boostDaysLeft -= 1;
+          if(item.boostDaysLeft <= 0){ item.boosted = false; self.addLog(item.title + ' için öne çıkarma süresi bitti.', ''); }
+        }
       });
       if(totalHolding > 0){
         player.spend(totalHolding);
         self.addLog('Sigorta / vergi masrafları: ' + fmt(totalHolding) + ' (' + state.inventory.length + ' ürün için)', 'neg');
       }
+
+      // ---- Kasko primi + kaza riski (sadece araçlar) ----
+      state.inventory.filter(function(i){ return i.category==='araba'; }).forEach(function(car){
+        if(car.insured){
+          var premium = Math.max(KASKO_MIN_DAILY, Math.round(car.currentValue()*KASKO_DAILY_RATE));
+          player.spend(premium);
+          self.addLog(car.title + ' kasko primi: ' + fmt(premium), 'neg');
+        }
+        if(Math.random() < KAZA_DAILY_CHANCE){
+          var faultDef = pick(FAULT_POOL_CAR);
+          var newFault = { tag:faultDef.tag, label:faultDef.label, loss:rnd(faultDef.loss[0],faultDef.loss[1]), repairCost:rnd(faultDef.repair[0],faultDef.repair[1]), fixed:false, heavy:false };
+          if(car.insured){
+            player.spend(KASKO_DEDUCTIBLE);
+            newFault.fixed = true;
+            car.faults.push(newFault);
+            self.addLog('Kaza oldu: ' + car.title + ' — "' + newFault.label + '" ama kasko karşıladı (muafiyet ' + fmt(KASKO_DEDUCTIBLE) + ')', 'neg');
+            toast('Kaza oldu ama kaskon karşıladı.');
+          } else {
+            car.faults.push(newFault);
+            self.addLog('Kaza oldu: ' + car.title + ' — "' + newFault.label + '" — kaskon olmadığı için değer kaybı yaşandı (~' + fmt(newFault.loss) + ')', 'neg');
+            toast('Kaza oldu! Kaskon yoktu, değer kaybettin.');
+          }
+        }
+      });
 
       if(player.loan){
         var loan = player.loan;
@@ -665,12 +750,14 @@ export var Game = {
       // Anında satılmaz: her gün şansa göre bir alıcı ilgilenir, ya direkt
       // fiyata razı olur ya da indirim istemek için mesaj atar.
       var pLvl = player.skillLevel('pazarlik');
+      var repBonus = (self.reputationStars()-3) * 0.02; // ortalamanın üstü/altı küçük bir etki
       state.inventory.filter(function(i){ return i.forSale && !i.shopId && !i.pendingOffer; }).forEach(function(item){
         item.daysListed = (item.daysListed||0) + 1;
         var value = item.currentValue();
         var priceRatio = item.listedPrice / Math.max(1,value);
         var overpricePenalty = clamp((priceRatio-1)*0.6, 0, 0.3);
-        var attractChance = clamp(0.32 + pLvl*0.015 - overpricePenalty, 0.08, 0.7);
+        var boostBonus = item.boosted ? BOOST_ATTRACT_BONUS : 0;
+        var attractChance = clamp(0.32 + pLvl*0.015 - overpricePenalty + boostBonus + repBonus, 0.08, 0.85);
         if(Math.random() < attractChance){
           var buyerName = pick(BUYER_NAMES);
           if(Math.random() < 0.45){

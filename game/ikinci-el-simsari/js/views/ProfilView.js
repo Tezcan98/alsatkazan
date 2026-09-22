@@ -41,9 +41,12 @@ export var ProfilView = {
     saveBtn.onclick = function(){ player.name = input.value || 'Simsar'; Game.render(); };
     nameRow.appendChild(input); nameRow.appendChild(saveBtn);
     card.appendChild(nameRow);
+    var stars = Game.reputationStars();
+    var starsStr = '★★★★★'.slice(0, Math.round(stars)) + '☆☆☆☆☆'.slice(0, 5-Math.round(stars));
     var statsDiv = document.createElement('div');
     statsDiv.style.fontSize = '0.86rem'; statsDiv.style.lineHeight = '1.7';
     statsDiv.innerHTML =
+      'Satıcı puanı: <b style="color:var(--orange-dark);">' + starsStr + '</b> (' + stars.toFixed(1) + ' / 5)<br>' +
       'Toplam satış: <b>' + player.totalSales + '</b><br>' +
       'Toplam kâr/zarar: <b>' + fmt(player.totalProfit) + '</b><br>' +
       'Garajdaki ürün: <b>' + state.inventory.length + '</b><br>' +

@@ -27,5 +27,11 @@ export var ACHIEVEMENTS = [
   { id:'zengin-simsar', title:'Zengin Simsar', desc:'Kasanda 10.000.000 ₺ biriktir.',
     test: function(g){ return g.player.balance >= 10000000; } },
   { id:'firsatci', title:'Fırsatçı', desc:'Bir "FIRSAT" etiketli ilanı satın al.',
-    test: function(g){ return g._boughtDealCount > 0; } }
+    test: function(g){ return g._boughtDealCount > 0; } },
+  { id:'tedbirli', title:'Tedbirli Sürücü', desc:'Bir aracına kasko yaptır.',
+    test: function(g){ return g._kaskoCount > 0; } },
+  { id:'reklamci', title:'Reklamcı', desc:'Bir ilanını öne çıkar (doping).',
+    test: function(g){ return g._boostCount > 0; } },
+  { id:'guvenilir-alici', title:'Güvenilir Alıcı', desc:'Bir TRAMER Tam Rapor satın al.',
+    test: function(g){ return g._fullInspectCount > 0; } }
 ];
