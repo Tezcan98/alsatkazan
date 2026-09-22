@@ -3,6 +3,7 @@ import { Game } from '../controllers/GameController.js';
 import { SKILL_LABELS, LOAN_TIERS } from '../data/constants.js';
 import { IMG } from '../data/images.js';
 import { OperationManager } from '../services/OperationManager.js';
+import { ACHIEVEMENTS } from '../controllers/achievements.js';
 
 // =====================================================================
 //  PROFİLİM (Görünüm katmanı) — Kontrol Paneli alt sayfası
@@ -107,6 +108,23 @@ export var ProfilView = {
       grid.appendChild(c);
     });
     container.appendChild(grid);
+
+    var h2a = document.createElement('h2');
+    h2a.className = 'section';
+    h2a.innerHTML = 'Başarımlar <span class="count">(' + player.achievements.length + ' / ' + ACHIEVEMENTS.length + ')</span>';
+    container.appendChild(h2a);
+    var achGrid = document.createElement('div');
+    achGrid.className = 'grid';
+    ACHIEVEMENTS.forEach(function(a){
+      var unlocked = player.achievements.indexOf(a.id) >= 0;
+      var ac = document.createElement('div');
+      ac.className = 'card';
+      if(!unlocked) ac.style.opacity = '0.45';
+      ac.innerHTML = '<h3>' + (unlocked ? a.title : '??? ') + '</h3>' +
+        '<div class="kicker">' + (unlocked ? a.desc : 'Henüz açılmadı') + '</div>';
+      achGrid.appendChild(ac);
+    });
+    container.appendChild(achGrid);
 
     var h2c = document.createElement('h2');
     h2c.className = 'section';

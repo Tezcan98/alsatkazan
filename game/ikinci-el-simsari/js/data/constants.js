@@ -250,3 +250,19 @@ export const CONSTRUCTION_COST_PER_M2 = sc(3500);
 export const CONSTRUCTION_DAYS_MIN = 4;
 export const CONSTRUCTION_DAYS_MAX = 7;
 export const CONSTRUCTION_VALUE_MULT = 1.7; // inşaat bitince eklenen değer = maliyet × bu çarpan
+
+// ---- Sahip olma masrafları ----
+// Garajda bekleyen araç/arsa bedava durmuyor: her gün küçük bir sigorta/
+// vergi masrafı çıkar, uzun süre satılmayan ürünler de yavaşça değer
+// kaybeder — elinde tutmanın da bir bedeli olsun diye.
+export const CAR_DAILY_HOLDING_COST = sc(120);
+export const ARSA_DAILY_HOLDING_COST = sc(25);
+export const STALE_LISTING_DAYS = 10; // bu günden sonra değer kaybı başlar
+export const STALE_DEPRECIATION_RATE = 0.004; // günlük ~%0.4
+
+// ---- Fırsat İlanı ----
+// Her gün küçük bir ihtimalle piyasada bir ilan normalden çok daha ucuza
+// düşer — erken davranan kazanır.
+export const DEAL_CHANCE = 0.45;
+export const DEAL_DISCOUNT_MIN = 0.18;
+export const DEAL_DISCOUNT_MAX = 0.34;

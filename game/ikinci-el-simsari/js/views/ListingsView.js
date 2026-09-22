@@ -45,6 +45,13 @@ export var ListingsView = {
       ob.textContent = 'TEKLİF VAR';
       h3.appendChild(ob);
     }
+    if(item.isDeal && !opts.mine){
+      var db = document.createElement('span');
+      db.className = 'badge';
+      db.style.background = 'var(--red)';
+      db.textContent = 'FIRSAT';
+      h3.appendChild(db);
+    }
     info.appendChild(h3);
     var meta = document.createElement('div');
     meta.className = 'meta';
@@ -55,6 +62,12 @@ export var ListingsView = {
     var right = document.createElement('div');
     right.style.display = 'flex'; right.style.flexDirection = 'column'; right.style.alignItems = 'flex-end'; right.style.gap = '4px';
 
+    if(item.isDeal && !opts.mine && item.originalPrice){
+      var oldPrice = document.createElement('div');
+      oldPrice.style.fontSize = '0.72rem'; oldPrice.style.color = 'var(--ink-faint)'; oldPrice.style.textDecoration = 'line-through';
+      oldPrice.textContent = fmt(item.originalPrice);
+      right.appendChild(oldPrice);
+    }
     var price = document.createElement('div');
     price.className = 'price';
     price.textContent = fmt(opts.mine ? item.listedPrice : item.askingPrice);

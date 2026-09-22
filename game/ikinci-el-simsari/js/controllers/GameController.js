@@ -8,8 +8,10 @@ import {
   CAR_QUESTIONS, ARSA_QUESTIONS, USTALAR, MASRAF_OPTIONS,
   TENANT_NAMES, TENANT_BUSINESS_ARABA, TENANT_BUSINESS_ARSA,
   BUYER_NAMES, BUYER_DISCOUNT_LINES, PRICE_SCALE, LOAN_TIERS,
-  CONSTRUCTION_COST_PER_M2, CONSTRUCTION_DAYS_MIN, CONSTRUCTION_DAYS_MAX, CONSTRUCTION_VALUE_MULT
+  CONSTRUCTION_COST_PER_M2, CONSTRUCTION_DAYS_MIN, CONSTRUCTION_DAYS_MAX, CONSTRUCTION_VALUE_MULT,
+  CAR_DAILY_HOLDING_COST, ARSA_DAILY_HOLDING_COST, STALE_LISTING_DAYS, STALE_DEPRECIATION_RATE
 } from '../data/constants.js';
+import { ACHIEVEMENTS } from './achievements.js';
 
 function sc(n){ return Math.round(n*PRICE_SCALE); }
 
@@ -40,6 +42,8 @@ export var Game = {
   },
   player: new Player(),
   render: function(){ /* main.js tarafından değiştirilir */ },
+  _loanRepaidCount: 0,
+  _boughtDealCount: 0,
 
   init: function(){
     ConfirmDialog.init();
@@ -52,6 +56,20 @@ export var Game = {
   addLog: function(msg, cls){
     this.state.log.unshift({msg:msg, cls:cls||""});
     if(this.state.log.length>50) this.state.log.pop();
+  },
+
+  // Her önemli eylemden sonra çağrılır: henüz açılmamış ve şartı
+  // sağlanan başarımları açar, loglar ve toast gösterir.
+  checkAchievements: function(){
+    var self = this;
+    ACHIEVEMENTS.forEach(function(a){
+      if(self.player.achievements.indexOf(a.id) >= 0) return;
+      if(a.test(self)){
+        self.player.achievements.push(a.id);
+        self.addLog('Başarım açıldı: ' + a.title + ' — ' + a.desc, 'pos');
+        toast('Başarım açıldı: ' + a.title);
+      }
+    });
   },
 
   findListing: function(id){ return this.state.listings.find(function(l){return l.id===id;}); },
@@ -106,6 +124,7 @@ export var Game = {
       player.spend(desc.cost);
       item.owned = true;
       item.purchasePrice = desc.cost;
+      if(item.isDeal) self._boughtDealCount += 1;
       if(item.category==='dukkan'){
         state.shops.push(item);
         self.addLog('Devren satın alındı: ' + item.title + ' — ' + fmt(item.purchasePrice), 'neg');
@@ -119,6 +138,7 @@ export var Game = {
         player.addXp('pazarlik', 3);
         self.checkForKazik(item, wasInspected);
       }
+      self.checkAchievements();
       state.openDetailId = null;
       self.render();
     });
@@ -315,6 +335,7 @@ export var Game = {
     player.addXp('pazarlik', 6);
     player.totalSales += 1;
     player.totalProfit += profit;
+    this.checkAchievements();
   },
 
   // Bir alıcının indirim teklifini kabul/reddet.
@@ -540,6 +561,8 @@ export var Game = {
     this.addLog('Kredi tamamen kapatıldı: ' + fmt(remaining), 'neg');
     toast('Kredi kapatıldı.');
     player.loan = null;
+    this._loanRepaidCount += 1;
+    this.checkAchievements();
     this.render();
   },
 
@@ -568,6 +591,22 @@ export var Game = {
         }
       });
 
+      // ---- Sahip olma masrafları: garajda bekleyen araç/arsa bedava durmaz ----
+      var totalHolding = 0;
+      state.inventory.forEach(function(item){
+        item.daysOwned = (item.daysOwned||0) + 1;
+        if(item.category==='araba'){ totalHolding += CAR_DAILY_HOLDING_COST; }
+        else if(item.category==='arsa'){ totalHolding += ARSA_DAILY_HOLDING_COST; }
+        // uzun süre satılamayan ürünler yavaşça değer kaybeder
+        if(item.forSale && item.daysListed > STALE_LISTING_DAYS){
+          item.trueValue = Math.max(1000, Math.round(item.trueValue * (1-STALE_DEPRECIATION_RATE)));
+        }
+      });
+      if(totalHolding > 0){
+        player.spend(totalHolding);
+        self.addLog('Sigorta / vergi masrafları: ' + fmt(totalHolding) + ' (' + state.inventory.length + ' ürün için)', 'neg');
+      }
+
       if(player.loan){
         var loan = player.loan;
         loan.remaining += Math.round(loan.remaining*loan.dailyRate);
@@ -577,6 +616,7 @@ export var Game = {
         if(loan.remaining <= 1){
           self.addLog('Banka kredisi tamamen ödendi.', 'pos');
           player.loan = null;
+          self._loanRepaidCount += 1;
         } else {
           self.addLog('Kredi ödemesi yapıldı: ' + fmt(payment) + ' (kalan borç: ' + fmt(loan.remaining) + ')', 'neg');
         }
@@ -653,6 +693,7 @@ export var Game = {
 
       if(player.balance < 0) self.addLog('Kasan eksiye düştü, dikkat!', 'neg');
       self.addLog('— Gün ' + state.day + ' başladı, yeni ilanlar geldi —');
+      self.checkAchievements();
       self.render();
     });
   }

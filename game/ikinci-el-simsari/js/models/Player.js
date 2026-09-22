@@ -12,6 +12,7 @@ export function Player(){
   this.totalSales = 0;
   this.totalProfit = 0;
   this.loan = null; // { amount, remaining, dailyRate, dailyPayment }
+  this.achievements = [];
 }
 Player.prototype.skillLevel = function(key){
   return clamp(1 + Math.floor(this.skills[key]/SKILL_XP_PER_LEVEL), 1, 10);

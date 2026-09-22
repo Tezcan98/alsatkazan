@@ -53,9 +53,24 @@ export var DetailView = {
     h1.textContent = item.title;
     body.appendChild(h1);
 
+    if(item.isDeal && !item.owned && item.originalPrice){
+      var dealBanner = document.createElement('div');
+      dealBanner.className = 'badge';
+      dealBanner.style.background = 'var(--red)'; dealBanner.style.marginBottom = '4px'; dealBanner.style.display = 'inline-block';
+      dealBanner.textContent = 'FIRSAT İLANI';
+      body.appendChild(dealBanner);
+    }
     var pr = document.createElement('div');
     pr.className = 'detail-price';
-    pr.textContent = fmt(item.askingPrice);
+    if(item.isDeal && !item.owned && item.originalPrice){
+      var oldP = document.createElement('span');
+      oldP.style.fontSize = '0.6em'; oldP.style.color = 'var(--ink-faint)'; oldP.style.textDecoration = 'line-through'; oldP.style.marginRight = '8px';
+      oldP.textContent = fmt(item.originalPrice);
+      pr.appendChild(oldP);
+    }
+    var prVal = document.createElement('span');
+    prVal.textContent = fmt(item.askingPrice);
+    pr.appendChild(prVal);
     body.appendChild(pr);
 
     var table = document.createElement('table');

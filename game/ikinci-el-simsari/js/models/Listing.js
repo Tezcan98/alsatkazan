@@ -17,6 +17,7 @@ export function Listing(props){
   this.daysListed = 0;
   this.pendingOffer = null;
   this.favorite = false;
+  this.daysOwned = 0;
 }
 Listing.prototype.currentValue = function(){
   var remainingLoss = this.faults.filter(function(f){return !f.fixed;}).reduce(function(s,f){return s+f.loss;},0);

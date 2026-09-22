@@ -6,7 +6,7 @@ import {
   PARTS_CATALOG, CAR_PART_DEFS, PART_STATUS,
   SELLER_REASONS_CAR, SELLER_USAGE_CAR, SELLER_CLOSING_CAR,
   SELLER_REASONS_ARSA, SELLER_CLOSING_ARSA, SELLER_REASONS_DUKKAN,
-  PRICE_SCALE
+  PRICE_SCALE, DEAL_CHANCE, DEAL_DISCOUNT_MIN, DEAL_DISCOUNT_MAX
 } from '../data/constants.js';
 
 // =====================================================================
@@ -135,6 +135,17 @@ export var Market = {
     for(var i=0;i<carCount;i++) listings.push(this.makeCar());
     for(var j=0;j<arsaCount;j++) listings.push(this.makeArsa());
     for(var k=0;k<shopCount;k++) listings.push(this.makeShop());
+
+    // ---- Fırsat ilanı: günde bir ihtimalle bir ilan çok ucuza düşer ----
+    if(Math.random() < DEAL_CHANCE){
+      var dealItem = pick(listings.filter(function(l){return l.category!=='dukkan';}));
+      if(dealItem){
+        var discount = DEAL_DISCOUNT_MIN + Math.random()*(DEAL_DISCOUNT_MAX-DEAL_DISCOUNT_MIN);
+        dealItem.originalPrice = dealItem.askingPrice;
+        dealItem.askingPrice = Math.round(dealItem.askingPrice * (1-discount));
+        dealItem.isDeal = true;
+      }
+    }
     return listings;
   },
 
