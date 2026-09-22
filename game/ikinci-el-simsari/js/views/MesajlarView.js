@@ -40,6 +40,13 @@ export var MesajlarView = {
       info.className = 'info';
       var h3 = document.createElement('h3');
       h3.textContent = entry.kind==='kiraci' ? entry.shop.tenant.name + ' (kiracı)' : entry.item.title;
+      if(entry.kind==='ilan' && entry.item.pendingOffer){
+        var badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.style.background = 'var(--orange)'; badge.style.color = '#241a00';
+        badge.textContent = 'TEKLİF VAR';
+        h3.appendChild(badge);
+      }
       info.appendChild(h3);
       var meta = document.createElement('div');
       meta.className = 'meta';

@@ -2,7 +2,7 @@ import { fmt, clamp } from '../utils.js';
 import { Game } from '../controllers/GameController.js';
 import { OperationManager } from '../services/OperationManager.js';
 import { IMG } from '../data/images.js';
-import { CAR_MODELS, USTALAR } from '../data/constants.js';
+import { CAR_MODELS, USTALAR, PARTS_CATALOG } from '../data/constants.js';
 
 // =====================================================================
 //  USTALAR & YEDEK PARÇACI (Görünüm katmanı) — Kontrol Paneli alt sayfası
@@ -54,20 +54,33 @@ export var UstalarView = {
 
     function renderPartsForBrand(brand){
       partsListWrap.innerHTML = '';
-      state.partsMarket.filter(function(p){return p.brand===brand;}).forEach(function(p){
+      // Katalogdaki HER parça türü gösterilir; o gün stokta olmayanlar
+      // (Market.refreshPartsMarket bazılarını rastgele atlar) "Stokta yok"
+      // olarak, alınamaz şekilde listelenir.
+      PARTS_CATALOG.forEach(function(cat){
+        var p = state.partsMarket.find(function(x){return x.brand===brand && x.tag===cat.tag;});
         var pr = document.createElement('div');
         pr.className = 'repair-fault-row';
         var lbl = document.createElement('div');
         lbl.className = 'flabel';
-        var have = state.parts[brand+'|'+p.tag] || 0;
-        lbl.textContent = p.name + (have>0 ? ' (elinde ' + have + ')' : '');
+        var have = state.parts[brand+'|'+cat.tag] || 0;
+        lbl.textContent = cat.name + (have>0 ? ' (elinde ' + have + ')' : '');
         pr.appendChild(lbl);
-        var buyBtn = document.createElement('button');
-        buyBtn.className = 'btn-ghost btn-sm';
-        buyBtn.textContent = fmt(p.price);
-        buyBtn.disabled = OperationManager.isBusy() || player.balance < p.price;
-        buyBtn.onclick = function(){ Game.doBuyPart(brand, p.tag); };
-        pr.appendChild(buyBtn);
+        if(p){
+          var buyBtn = document.createElement('button');
+          buyBtn.className = 'btn-ghost btn-sm';
+          buyBtn.textContent = fmt(p.price);
+          buyBtn.disabled = OperationManager.isBusy() || player.balance < p.price;
+          buyBtn.onclick = function(){ Game.doBuyPart(brand, cat.tag); };
+          pr.appendChild(buyBtn);
+        } else {
+          var oos = document.createElement('span');
+          oos.className = 'tag-chip';
+          oos.style.background = 'var(--ink-faint)';
+          oos.style.color = '#fff';
+          oos.textContent = 'Bugün stokta yok';
+          pr.appendChild(oos);
+        }
         partsListWrap.appendChild(pr);
       });
     }

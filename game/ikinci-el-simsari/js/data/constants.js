@@ -25,13 +25,12 @@ export const TRANS = ["Manuel","Otomatik"];
 export const FUEL = ["Benzin","Dizel","LPG'li Benzin","Hibrit"];
 export const BODY = ["Sedan","Hatchback","SUV","Station Wagon"];
 
+// Mekanik/elektrik arızaları — boya/değişen parça durumu artık ayrı
+// bir sistemle (CAR_PART_DEFS + boya/değişen şeması) yönetiliyor.
 export const FAULT_POOL_CAR = [
   {tag:"motor", label:"Motor arızası", loss:[35000,70000], repair:[15000,28000]},
   {tag:"motor", label:"Şanzıman sorunu", loss:[25000,55000], repair:[12000,24000]},
   {tag:"motor", label:"Turbo arızası", loss:[20000,40000], repair:[10000,20000]},
-  {tag:"boya", label:"Boyalı kaput", loss:[8000,18000], repair:[4000,9000]},
-  {tag:"boya", label:"Değişen kapı", loss:[10000,20000], repair:[5000,11000]},
-  {tag:"boya", label:"Değişen tampon", loss:[6000,14000], repair:[3000,7000]},
   {tag:"diger", label:"Lastik değişimi gerekiyor", loss:[6000,12000], repair:[5000,9000]},
   {tag:"diger", label:"Fren balatası bitmiş", loss:[4000,9000], repair:[2500,5000]},
   {tag:"diger", label:"Klima çalışmıyor", loss:[5000,11000], repair:[3000,7000]},
@@ -40,6 +39,28 @@ export const FAULT_POOL_CAR = [
   {tag:"diger", label:"Akü ve şarj sistemi zayıf", loss:[2500,6000], repair:[1500,3000]}
 ];
 export const HEAVY_FAULT = {tag:"hasar", label:"Ağır hasar kaydı (şasi/kaporta)", loss:[45000,90000], repair:[25000,50000], heavy:true};
+
+// ---- sahibinden.com tarzı boya/değişen parça şeması ----
+// Her araç için 11 kaporta parçasının durumu (orijinal / boyalı / değişen)
+// ayrı ayrı belirlenir ve detay ekranında şema olarak çizilir.
+export const CAR_PART_DEFS = [
+  {key:"on-tampon", label:"Ön Tampon"},
+  {key:"kaput", label:"Kaput"},
+  {key:"tavan", label:"Tavan"},
+  {key:"bagaj", label:"Bagaj"},
+  {key:"arka-tampon", label:"Arka Tampon"},
+  {key:"sol-on-camurluk", label:"Sol Ön Çamurluk"},
+  {key:"sag-on-camurluk", label:"Sağ Ön Çamurluk"},
+  {key:"sol-on-kapi", label:"Sol Ön Kapı"},
+  {key:"sag-on-kapi", label:"Sağ Ön Kapı"},
+  {key:"sol-arka-kapi", label:"Sol Arka Kapı"},
+  {key:"sag-arka-kapi", label:"Sağ Arka Kapı"}
+];
+export const PART_STATUS = {
+  orijinal: {label:"Orijinal", color:"#9aa4ad"},
+  boyali: {label:"Boyalı", color:"#e0980a", loss:[3000,7000], repair:[2500,5500]},
+  degisen: {label:"Değişen", color:"#c62828", loss:[6000,13000], repair:[4500,9500]}
+};
 
 export const CAR_AD_PHRASES = [
   "Tek elden, düzenli bakımlı araçtır.",
@@ -54,6 +75,34 @@ export const CAR_AD_PHRASES = [
   "Bayi çıkışlı, tüm bakımları faturalıdır.",
   "Ailemin ikinci aracıydı, günlük şehir içi kullanıldı.",
   "Fiyatımda pazarlık payı vardır, ciddi alıcılar arasın."
+];
+
+// ---- "hikayeli" satıcı açıklaması — birden fazla parça birleştirilerek
+// her ilana kişisel bir anlatı hissi verir ----
+export const SELLER_REASONS_CAR = [
+  "yurt dışına taşındığım için satıyorum",
+  "yeni araca geçtiğim için elden çıkarıyorum",
+  "ailede ikinci araca ihtiyaç kalmadığı için satılıktır",
+  "iş değişikliği nedeniyle ihtiyacım kalmadı",
+  "eşimin aracına geçtik, bu yüzden satılık",
+  "nakit ihtiyacından dolayı acil satıyorum",
+  "kullanım amacım değişti, daha küçük bir araca bakıyorum",
+  "büyükşehre taşındım, araca ihtiyacım kalmadı"
+];
+export const SELLER_USAGE_CAR = [
+  "genelde şehir içi kullandım, uzun yol azdı",
+  "hafta sonları dışında pek kullanmadım",
+  "işe gidiş geliş dışında bagajda bile bir şey taşımadım",
+  "her zaman kapalı otoparkta muhafaza ettim",
+  "yılda bir kez genel bakımını ihmal etmedim",
+  "sigara içilmedi, evcil hayvan taşınmadı"
+];
+export const SELLER_CLOSING_CAR = [
+  "Ciddi alıcılarla görüşürüm, whatsapp'tan da yazabilirsiniz.",
+  "Aracı yerinde görüp inceleyebilirsiniz.",
+  "Vekaletle satış da yapılabilir.",
+  "Değişik teklif almadan lütfen aramayın.",
+  "Kredi ve takas değerlendirilir."
 ];
 
 export const ARSA_IMAR = ["Konut İmarlı","Ticari İmarlı","Tarla","Bağ-Bahçe","Sanayi İmarlı"];
@@ -75,6 +124,19 @@ export const ARSA_AD_PHRASES = [
   "Miras nedeniyle acil satılıktır.",
   "Toplu konut projelerine yakın konumdadır."
 ];
+export const SELLER_REASONS_ARSA = [
+  "miras kalan hisseleri tek elden toplamak için satıyorum",
+  "yatırım amaçlı almıştım, farklı bir bölgeye yöneldim",
+  "borç kapatmak için acil nakde ihtiyacım var",
+  "şehir dışına taşındım, buradaki arazi elimde kaldı",
+  "ortaklığı sonlandırıp parselleri ayırıyoruz"
+];
+export const SELLER_CLOSING_ARSA = [
+  "Yerinde gösterilir, harita üzerinden sınırlar net.",
+  "Tapu devrinde masraflar paylaşılır.",
+  "Ciddi olmayan tekliflere yanıt vermiyorum.",
+  "Emlakçı komisyonu alıcıya ait değildir."
+];
 
 export const SHOP_TYPES = [
   {type:"galeri", title:"Oto Galerisi", accepts:"araba", capacity:[2,4], rent:[3000,8000], price:[90000,230000]},
@@ -86,6 +148,13 @@ export const DUKKAN_AD_PHRASES = [
   "Sağlık sorunları nedeniyle devredilecektir.",
   "Sabit müşteri potansiyeli mevcuttur.",
   "Tadilata gerek yok, kullanıma hazırdır."
+];
+export const SELLER_REASONS_DUKKAN = [
+  "emekli oluyorum, işi devretmek istiyorum",
+  "farklı bir şehre taşınıyoruz",
+  "ortaklığı sonlandırıyoruz",
+  "sağlık sorunları nedeniyle işi bırakıyorum",
+  "yeni bir işe yöneldiğim için devrediyorum"
 ];
 
 export const AMBIENT_EVENTS = [
@@ -109,8 +178,16 @@ export const PARTS_CATALOG = [
   {tag:"diger", name:"Lastik / Fren / Klima Sarfı", basePrice:1800},
   {tag:"hasar", name:"Ağır Hasar Onarım Seti", basePrice:15000}
 ];
-export const SKILL_LABELS = { tamir:"Tamir Ustalığı", pazarlik:"Pazarlık Ustalığı", ekspertiz:"Ekspertiz Gözü", isletme:"İşletmecilik" };
+export const SKILL_LABELS = { tamir:"Tamir Ustalığı", pazarlik:"Pazarlık Ustalığı", ekspertiz:"Ekspertiz Gözü", isletme:"İşletmecilik", sabir:"Sabır" };
 export const SKILL_XP_PER_LEVEL = 120;
+
+export const BUYER_NAMES = ["Cem Bey","Selin Hanım","Tolga Bey","Burcu Hanım","İsmail Bey","Nazlı Hanım","Emre Bey","Gül Hanım","Volkan Bey","Aslı Hanım"];
+export const BUYER_DISCOUNT_LINES = [
+  "aracınızı/ürününüzü beğendim ama biraz yüksek, {offer} yaparsanız hemen alırım",
+  "elimde {offer} nakit var, bugün almak isterim",
+  "ilanınızla ilgileniyorum, son fiyatınız {offer} olabilir mi?",
+  "bütçem {offer}, üstüne çıkamıyorum ama peşin ödeme yaparım"
+];
 
 export const MASRAF_OPTIONS = [
   {id:"tadilat", name:"Tadilat / Yenileme", desc:"Vitrin kapasitesini kalıcı olarak +1 artırır.", cost:15000},

@@ -55,8 +55,29 @@ export var GarageView = {
       else statusParts.push(unfixed.length + ' bilinen sorun (tamiri yok, sadece değeri düşürür).');
       var ownerShop = item.shopId ? state.shops.find(function(s){return s.id===item.shopId;}) : null;
       if(ownerShop) statusParts.push('Vitrinde: ' + ownerShop.title);
+      if(item.forSale) statusParts.push('Satışta (' + item.daysListed + ' gündür, ' + fmt(item.listedPrice) + ')');
       status.textContent = statusParts.join(' ');
       card.appendChild(status);
+
+      if(item.forSale && item.pendingOffer){
+        var offerBox = document.createElement('div');
+        offerBox.style.marginTop = '6px'; offerBox.style.padding='7px 9px';
+        offerBox.style.background = 'var(--page)'; offerBox.style.borderRadius='5px';
+        offerBox.style.fontSize = '0.78rem';
+        offerBox.innerHTML = '<b>' + item.pendingOffer.buyerName + '</b> teklif etti: <b>' + fmt(item.pendingOffer.offerPrice) + '</b>';
+        card.appendChild(offerBox);
+        var offerRow = document.createElement('div');
+        offerRow.style.display='flex'; offerRow.style.gap='6px'; offerRow.style.marginTop='6px';
+        var accBtn = document.createElement('button');
+        accBtn.className = 'btn-orange btn-sm'; accBtn.textContent = 'Teklifi Kabul Et';
+        accBtn.disabled = OperationManager.isBusy();
+        accBtn.onclick = function(){ Game.resolveBuyerOffer(item.id, true); };
+        var rejBtn = document.createElement('button');
+        rejBtn.className = 'btn-ghost btn-sm'; rejBtn.textContent = 'Reddet';
+        rejBtn.onclick = function(){ Game.resolveBuyerOffer(item.id, false); };
+        offerRow.appendChild(accBtn); offerRow.appendChild(rejBtn);
+        card.appendChild(offerRow);
+      }
 
       var row = document.createElement('div');
       row.style.display='flex'; row.style.gap='6px'; row.style.marginTop='8px'; row.style.flexWrap='wrap';
@@ -73,12 +94,20 @@ export var GarageView = {
         outBtn.onclick = function(){ Game.unassignFromShop(ownerShop.id, item.id); };
         row.appendChild(outBtn);
       }
-      var sellBtn = document.createElement('button');
-      sellBtn.className = 'btn-navy btn-sm';
-      sellBtn.textContent = 'Sat';
-      sellBtn.disabled = OperationManager.isBusy();
-      sellBtn.onclick = function(){ Game.doSell(item.id); };
-      row.appendChild(sellBtn);
+      if(item.forSale){
+        var unlistBtn = document.createElement('button');
+        unlistBtn.className = 'btn-ghost btn-sm';
+        unlistBtn.textContent = 'Satıştan Kaldır';
+        unlistBtn.onclick = function(){ Game.doUnlist(item.id); };
+        row.appendChild(unlistBtn);
+      } else if(!ownerShop){
+        var sellBtn = document.createElement('button');
+        sellBtn.className = 'btn-navy btn-sm';
+        sellBtn.textContent = 'Satışa Çıkar (' + fmt(item.currentValue()) + ')';
+        sellBtn.disabled = OperationManager.isBusy();
+        sellBtn.onclick = function(){ Game.doListForSale(item.id, item.currentValue()); };
+        row.appendChild(sellBtn);
+      }
       card.appendChild(row);
 
       grid.appendChild(card);

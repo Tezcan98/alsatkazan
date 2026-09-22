@@ -7,7 +7,7 @@ import { SKILL_LABELS, SKILL_XP_PER_LEVEL } from '../data/constants.js';
 export function Player(){
   this.balance = 250000;
   this.startBalance = 250000;
-  this.skills = { tamir:0, pazarlik:0, ekspertiz:0, isletme:0 };
+  this.skills = { tamir:0, pazarlik:0, ekspertiz:0, isletme:0, sabir:0 };
   this.name = 'Simsar';
   this.totalSales = 0;
   this.totalProfit = 0;

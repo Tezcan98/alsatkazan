@@ -6,7 +6,8 @@ import { OperationManager } from '../services/OperationManager.js';
 import { ConfirmDialog } from '../services/ConfirmDialog.js';
 import {
   CAR_QUESTIONS, ARSA_QUESTIONS, USTALAR, MASRAF_OPTIONS,
-  TENANT_NAMES, TENANT_BUSINESS_ARABA, TENANT_BUSINESS_ARSA
+  TENANT_NAMES, TENANT_BUSINESS_ARABA, TENANT_BUSINESS_ARSA,
+  BUYER_NAMES, BUYER_DISCOUNT_LINES
 } from '../data/constants.js';
 
 // =====================================================================
@@ -82,6 +83,7 @@ export var Game = {
     var self = this, state = this.state, player = this.player;
     var item = this.findListing(id);
     if(!item) return;
+    var wasInspected = item.inspected;
     var desc = TransactionManager.purchase(player, item);
     this.perform(desc, function(){
       var idx = state.listings.findIndex(function(l){return l.id===id;});
@@ -100,10 +102,29 @@ export var Game = {
         state.inventory.push(item);
         self.addLog('Satın alındı: ' + item.title + ' — ' + fmt(item.purchasePrice), 'neg');
         toast('Satın alındı, Garajım sekmesinde.');
+        player.addXp('pazarlik', 3);
+        self.checkForKazik(item, wasInspected);
       }
       state.openDetailId = null;
       self.render();
     });
+  },
+
+  // Ekspertiz yaptırmadan alınan ürünlerde gizli arıza çıkarsa "kazık
+  // yedin" olayı tetiklenir: Sabır seviyesi yükseldikçe zararın bir kısmı
+  // telafi edilir (item.trueValue'ya geri eklenir) ve Sabır XP kazanılır.
+  checkForKazik: function(item, wasInspected){
+    if(wasInspected) return;
+    var totalLoss = item.faults.reduce(function(s,f){return s+f.loss;},0);
+    if(totalLoss < 15000) return;
+    var player = this.player;
+    var sabirLvl = player.skillLevel('sabir');
+    var mitigation = clamp(sabirLvl*0.03, 0, 0.3);
+    var recovered = Math.round(totalLoss*mitigation);
+    if(recovered>0) item.trueValue += recovered;
+    this.addLog('Kazık yedin! ' + item.title + ' üzerinde ' + fmt(totalLoss) + ' değerinde gizli arıza çıktı' + (recovered>0 ? ' (Sabır sayesinde ' + fmt(recovered) + ' telafi edildi)' : '') + '.', 'neg');
+    toast('Ekspertizsiz alım risklidir — kazık yedin!');
+    player.addXp('sabir', clamp(Math.round(totalLoss/900), 6, 35));
   },
 
   askQuestion: function(id, key){
@@ -177,6 +198,7 @@ export var Game = {
       } else {
         self.addLog(usta.name + ' işi bitiremedi: ' + item.title + ' — "' + f.label + '" — ' + fmt(desc.cost) + ' (boşa gitti)', 'neg');
         toast('Tamir başarısız oldu, para gitti.');
+        player.addXp('sabir', 8);
       }
       player.addXp('tamir', ok ? 10 : 4);
       self.render();
@@ -204,35 +226,80 @@ export var Game = {
       } else {
         self.addLog('Kendin denedin ama olmadı: ' + item.title + ' — "' + f.label + '" (parça harcandı)', 'neg');
         toast('Olmadı, parça boşa gitti ama tecrübe kazandın.');
+        player.addXp('sabir', 10);
       }
       player.addXp('tamir', ok ? 20 : 8);
       self.render();
     });
   },
 
-  doSell: function(id){
+  // ---- Garaj ürününü satışa çıkarma (anında satmaz) ----
+  // "Sat" artık tek tıkla anında para getirmiyor: ürün ilana çıkar,
+  // her gün geçişinde şansa bağlı olarak bir alıcı ilgilenir — bazen
+  // direkt fiyata razı olur, bazen indirim için mesaj atar.
+  doListForSale: function(id, price){
     var self = this, state = this.state, player = this.player;
     var item = this.findInv(id);
-    if(!item) return;
-    var desc = TransactionManager.sale(player, item, false);
+    if(!item || item.forSale) return;
+    var askPrice = Math.max(500, Math.round(price || item.currentValue()));
+    var desc = TransactionManager.listForSale(player, item, askPrice);
     this.perform(desc, function(){
-      var idx = state.inventory.findIndex(function(l){return l.id===id;});
-      if(idx<0) return;
-      var value = item.currentValue();
-      var pLvl = player.skillLevel('pazarlik');
-      var negotiation = 0.9 + Math.random()*(0.2 + pLvl*0.01);
-      var salePrice = Math.round(value*negotiation);
-      player.earn(salePrice);
-      var profit = salePrice - item.purchasePrice;
-      if(item.shopId){
-        var sh = state.shops.find(function(s){return s.id===item.shopId;});
-        if(sh) sh.slots = sh.slots.filter(function(x){return x!==item.id;});
-      }
-      state.inventory.splice(idx,1);
-      self.addLog('Satıldı: ' + item.title + ' — ' + fmt(salePrice) + ' (' + (profit>=0?'kâr ':'zarar ') + fmt(Math.abs(profit)) + ')', profit>=0?'pos':'neg');
-      player.addXp('pazarlik', 6);
-      player.totalSales += 1;
-      player.totalProfit += profit;
+      item.forSale = true;
+      item.listedPrice = askPrice;
+      item.daysListed = 0;
+      item.pendingOffer = null;
+      self.addLog(item.title + ' satışa çıkarıldı: ' + fmt(askPrice), '');
+      toast('İlana çıkarıldı — alıcılar gün geçtikçe ilgilenecek.');
+      self.render();
+    });
+  },
+
+  doUnlist: function(id){
+    var item = this.findInv(id);
+    if(!item) return;
+    item.forSale = false;
+    item.pendingOffer = null;
+    this.addLog(item.title + ' satıştan kaldırıldı.');
+    this.render();
+  },
+
+  // Envanterdeki bir ürünün nihai satışını tamamlar (ortak mantık):
+  // parayı yatırır, kâr/zarar loglar, istatistikleri günceller.
+  completeInventorySale: function(item, salePrice, viaLabel){
+    var state = this.state, player = this.player;
+    var idx = state.inventory.findIndex(function(l){return l.id===item.id;});
+    if(idx<0) return;
+    player.earn(salePrice);
+    var profit = salePrice - item.purchasePrice;
+    if(item.shopId){
+      var sh = state.shops.find(function(s){return s.id===item.shopId;});
+      if(sh) sh.slots = sh.slots.filter(function(x){return x!==item.id;});
+    }
+    state.inventory.splice(idx,1);
+    this.addLog((viaLabel||'Satıldı') + ': ' + item.title + ' — ' + fmt(salePrice) + ' (' + (profit>=0?'kâr ':'zarar ') + fmt(Math.abs(profit)) + ')', profit>=0?'pos':'neg');
+    player.addXp('pazarlik', 6);
+    player.totalSales += 1;
+    player.totalProfit += profit;
+  },
+
+  // Bir alıcının indirim teklifini kabul/reddet.
+  resolveBuyerOffer: function(id, accept){
+    var self = this, state = this.state, player = this.player;
+    var item = this.findInv(id);
+    if(!item || !item.pendingOffer) return;
+    var offer = item.pendingOffer;
+    if(!accept){
+      item.pendingOffer = null;
+      item.messages.push({from:'seller', text:'Tamam, o zaman şimdilik ' + fmt(item.listedPrice) + ' fiyatta bekliyorum.'});
+      this.addLog(offer.buyerName + '\'in teklifi reddedildi: ' + fmt(offer.offerPrice), '');
+      this.render();
+      return;
+    }
+    var desc = TransactionManager.acceptOffer(player, item, offer.offerPrice);
+    this.perform(desc, function(){
+      item.forSale = false;
+      item.pendingOffer = null;
+      self.completeInventorySale(item, offer.offerPrice, offer.buyerName + ' ile anlaşıldı');
       state.openDetailId = null;
       self.render();
     });
@@ -441,7 +508,10 @@ export var Game = {
             self.addLog(t.name + ' kirasını ödedi: ' + fmt(t.rent), 'pos');
           } else {
             self.addLog(t.name + ' bu ay kira ödemedi.', 'neg');
-            t.satisfaction = clamp(t.satisfaction - (shop.satisfactionGuard ? 2 : 5), 0, 100);
+            var sabirLvl = player.skillLevel('sabir');
+            var penalty = (shop.satisfactionGuard ? 2 : 5) - clamp(Math.floor(sabirLvl/3), 0, 3);
+            t.satisfaction = clamp(t.satisfaction - Math.max(1, penalty), 0, 100);
+            player.addXp('sabir', 5);
           }
           if(!t.pendingRequest && Math.random() < 0.20){
             t.pendingRequest = pick(TENANT_REQUESTS);
@@ -453,6 +523,37 @@ export var Game = {
           }
         }
       });
+
+      // ---- Garajda satışa çıkarılmış ürünler için alıcı simülasyonu ----
+      // Anında satılmaz: her gün şansa göre bir alıcı ilgilenir, ya direkt
+      // fiyata razı olur ya da indirim istemek için mesaj atar.
+      var pLvl = player.skillLevel('pazarlik');
+      state.inventory.filter(function(i){ return i.forSale && !i.shopId && !i.pendingOffer; }).forEach(function(item){
+        item.daysListed = (item.daysListed||0) + 1;
+        var value = item.currentValue();
+        var priceRatio = item.listedPrice / Math.max(1,value);
+        var overpricePenalty = clamp((priceRatio-1)*0.6, 0, 0.3);
+        var attractChance = clamp(0.32 + pLvl*0.015 - overpricePenalty, 0.08, 0.7);
+        if(Math.random() < attractChance){
+          var buyerName = pick(BUYER_NAMES);
+          if(Math.random() < 0.45){
+            // Doğrudan fiyata razı oluyor
+            var salePrice = Math.round(item.listedPrice * (0.98 + Math.random()*0.05));
+            item.forSale = false;
+            self.completeInventorySale(item, salePrice, buyerName + ' hemen aldı');
+            toast(buyerName + ' ' + item.title + ' için geldi ve aldı!');
+          } else {
+            // İndirim istiyor — mesaj olarak düşer, kabul/reddet gerekir
+            var offerPrice = Math.round(item.listedPrice * (0.78 + Math.random()*0.14));
+            item.pendingOffer = { buyerName: buyerName, offerPrice: offerPrice };
+            var line = pick(BUYER_DISCOUNT_LINES).replace('{offer}', fmt(offerPrice));
+            item.messages.push({ from:'seller', text: buyerName + ': "Merhaba, ' + line + '."' });
+            self.addLog(buyerName + ' indirim istedi: ' + item.title + ' için ' + fmt(offerPrice), '');
+            toast(buyerName + ' senden indirim istiyor — Mesajlar sekmesine bak.');
+          }
+        }
+      });
+
       if(player.balance < 0) self.addLog('Kasan eksiye düştü, dikkat!', 'neg');
       self.addLog('— Gün ' + state.day + ' başladı, yeni ilanlar geldi —');
       self.render();

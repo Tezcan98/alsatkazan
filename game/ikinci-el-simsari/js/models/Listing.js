@@ -11,6 +11,11 @@ export function Listing(props){
   this.messages = [];
   this.inspected = false;
   this.owned = false;
+  // garaj satış-ilanı durumu (bkz. GameController.doListForSale)
+  this.forSale = false;
+  this.listedPrice = 0;
+  this.daysListed = 0;
+  this.pendingOffer = null;
 }
 Listing.prototype.currentValue = function(){
   var remainingLoss = this.faults.filter(function(f){return !f.fixed;}).reduce(function(s,f){return s+f.loss;},0);

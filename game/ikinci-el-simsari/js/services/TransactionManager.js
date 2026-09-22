@@ -82,6 +82,39 @@ export var TransactionManager = {
     };
   },
 
+  // --- Garaj ürününü satışa çıkar (anında satmaz, şansa bağlı alıcı bekler) ---
+  listForSale: function(player, item, price){
+    var hours = 0.4;
+    return {
+      type:'LIST_FOR_SALE',
+      title:'Satışa Çıkar',
+      message: item.title + ' için ' + fmt(price) + ' fiyatla ilan yayınlanacak. Anında satılmaz — alıcılar gün geçtikçe ilgilenir, bazen indirim ister.',
+      cost: 0,
+      durationMs: this.hoursToRealMs(hours),
+      durationLabel: this.hoursLabel(hours),
+      riskLabel:'Fiyat çok yüksekse alıcı bulmak uzayabilir.',
+      confirmLabel:'İlana Çıkar',
+      skipConfirm:true,
+      phases:['İlan hazırlanıyor…','Fotoğraflar ekleniyor…','Yayınlandı…']
+    };
+  },
+
+  // --- Bir alıcının indirim teklifini kabul et ---
+  acceptOffer: function(player, item, offerPrice){
+    var hours = 0.6;
+    return {
+      type:'ACCEPT_OFFER',
+      title:'Teklifi Kabul Et',
+      message: item.title + ' için ' + fmt(offerPrice) + ' teklifini kabul edip satışı tamamlayacaksın.',
+      cost: 0,
+      durationMs: this.hoursToRealMs(hours),
+      durationLabel: this.hoursLabel(hours),
+      riskLabel:'Risksiz — fiyat üzerinde anlaşıldı.',
+      confirmLabel:'Teklifi Kabul Et',
+      phases:['Alıcıya onay veriliyor…','Ödeme alınıyor…','Devir tamamlanıyor…']
+    };
+  },
+
   // --- Usta ile tamir ---
   repair: function(player, item, fault, usta, usesPart){
     var cost = Math.round(fault.repairCost * usta.priceMult * (usesPart ? 0.6 : 1));

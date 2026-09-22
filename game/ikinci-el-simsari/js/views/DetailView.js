@@ -3,6 +3,7 @@ import { Game } from '../controllers/GameController.js';
 import { TransactionManager } from '../services/TransactionManager.js';
 import { OperationManager } from '../services/OperationManager.js';
 import { CAR_QUESTIONS, ARSA_QUESTIONS } from '../data/constants.js';
+import { buildCarPartsDiagram } from './CarPartsDiagram.js';
 
 // =====================================================================
 //  İLAN DETAYI (Görünüm katmanı) — sağdan kayan overlay
@@ -61,6 +62,14 @@ export var DetailView = {
     });
     body.appendChild(table);
 
+    if(item.category==='araba'){
+      var diagTitle = document.createElement('h2');
+      diagTitle.className = 'section';
+      diagTitle.textContent = 'Boya / Değişen Bilgisi';
+      body.appendChild(diagTitle);
+      body.appendChild(buildCarPartsDiagram(item));
+    }
+
     var descBox = document.createElement('div');
     descBox.className = 'desc-box';
     descBox.textContent = item.description;
@@ -108,36 +117,69 @@ export var DetailView = {
       buyBtn.disabled = busy || player.balance < item.askingPrice;
       buyBtn.onclick = function(){ Game.doBuy(item.id); };
       actions.appendChild(buyBtn);
+    } else if(item.forSale){
+      var unlistBtn = document.createElement('button');
+      unlistBtn.className = 'btn-ghost';
+      unlistBtn.textContent = 'Satıştan Kaldır';
+      unlistBtn.onclick = function(){ Game.doUnlist(item.id); };
+      actions.appendChild(unlistBtn);
+      var note = document.createElement('div');
+      note.className = 'desc-note';
+      note.style.width = '100%';
+      note.textContent = 'İlanda: ' + fmt(item.listedPrice) + ' — ' + item.daysListed + ' gündür satışta, alıcı bekleniyor.';
+      actions.appendChild(note);
     } else {
       var sellBtn = document.createElement('button');
       sellBtn.className = 'btn-navy';
-      sellBtn.textContent = 'Sat (~' + fmt(item.currentValue()) + ')';
+      sellBtn.textContent = 'Satışa Çıkar (~' + fmt(item.currentValue()) + ')';
       sellBtn.disabled = busy;
-      sellBtn.onclick = function(){ Game.doSell(item.id); };
+      sellBtn.onclick = function(){ Game.doListForSale(item.id, item.currentValue()); };
       actions.appendChild(sellBtn);
     }
     body.appendChild(actions);
 
-    if(!item.owned && item.category!=='dukkan'){
+    if(item.owned && item.pendingOffer){
+      var offerCard = document.createElement('div');
+      offerCard.className = 'card';
+      offerCard.style.marginBottom = '16px';
+      offerCard.innerHTML = '<b>' + item.pendingOffer.buyerName + '</b> teklif etti: <b>' + fmt(item.pendingOffer.offerPrice) + '</b>';
+      var offerRow = document.createElement('div');
+      offerRow.className = 'action-row';
+      offerRow.style.marginTop = '8px'; offerRow.style.marginBottom='0';
+      var accBtn = document.createElement('button');
+      accBtn.className = 'btn-orange'; accBtn.textContent = 'Teklifi Kabul Et';
+      accBtn.disabled = busy;
+      accBtn.onclick = function(){ Game.resolveBuyerOffer(item.id, true); };
+      var rejBtn = document.createElement('button');
+      rejBtn.className = 'btn-ghost'; rejBtn.textContent = 'Reddet';
+      rejBtn.onclick = function(){ Game.resolveBuyerOffer(item.id, false); };
+      offerRow.appendChild(accBtn); offerRow.appendChild(rejBtn);
+      offerCard.appendChild(offerRow);
+      body.appendChild(offerCard);
+    }
+
+    if(item.category!=='dukkan' && (!item.owned || item.messages.length>0)){
       var chatbox = document.createElement('div');
       chatbox.className = 'chatbox';
       var chatTitle = document.createElement('h2');
       chatTitle.className = 'section';
-      chatTitle.textContent = 'Mesaj At';
+      chatTitle.textContent = 'Mesajlar';
       chatbox.appendChild(chatTitle);
 
-      var qbtns = document.createElement('div');
-      qbtns.className = 'qbtns';
-      var qList = item.category==='araba' ? CAR_QUESTIONS : ARSA_QUESTIONS;
-      qList.forEach(function(q){
-        var qb = document.createElement('button');
-        qb.className = 'btn-ghost';
-        qb.textContent = q.text;
-        if(q.key==='fiyat' && item.priceAsked) qb.disabled = true;
-        qb.onclick = function(){ Game.askQuestion(item.id, q.key); };
-        qbtns.appendChild(qb);
-      });
-      chatbox.appendChild(qbtns);
+      if(!item.owned){
+        var qbtns = document.createElement('div');
+        qbtns.className = 'qbtns';
+        var qList = item.category==='araba' ? CAR_QUESTIONS : ARSA_QUESTIONS;
+        qList.forEach(function(q){
+          var qb = document.createElement('button');
+          qb.className = 'btn-ghost';
+          qb.textContent = q.text;
+          if(q.key==='fiyat' && item.priceAsked) qb.disabled = true;
+          qb.onclick = function(){ Game.askQuestion(item.id, q.key); };
+          qbtns.appendChild(qb);
+        });
+        chatbox.appendChild(qbtns);
+      }
 
       item.messages.forEach(function(m){
         var b = document.createElement('div');
