@@ -1,0 +1,85 @@
+import { uid, fmt } from '../utils.js';
+import { IMG } from '../data/images.js';
+
+// =====================================================================
+//  VARLIK SINIFLARI (Model katmanı)
+// =====================================================================
+export function Listing(props){
+  Object.assign(this, props);
+  this.id = uid();
+  this.priceAsked = false;
+  this.messages = [];
+  this.inspected = false;
+  this.owned = false;
+}
+Listing.prototype.currentValue = function(){
+  var remainingLoss = this.faults.filter(function(f){return !f.fixed;}).reduce(function(s,f){return s+f.loss;},0);
+  return Math.max(500, this.trueValue - remainingLoss);
+};
+Listing.prototype.thumb = function(){ return null; };
+Listing.prototype.hero = function(){ return null; };
+Listing.prototype.imgFilter = function(){ return ''; };
+Listing.prototype.specRows = function(){ return []; };
+
+export function Car(base){
+  Listing.call(this, Object.assign({category:'araba'}, base));
+}
+Car.prototype = Object.create(Listing.prototype);
+Car.prototype.thumb = function(){ return IMG.carThumb(this); };
+Car.prototype.hero = function(){ return IMG.carHero(this); };
+Car.prototype.imgFilter = function(){ return IMG.carFilter(this); };
+Car.prototype.specRows = function(){
+  return [
+    ['Yıl', this.year],
+    ['KM', this.km.toLocaleString('tr-TR')],
+    ['Vites', this.trans],
+    ['Yakıt', this.fuel],
+    ['Kasa Tipi', this.body],
+    ['Renk', this.color],
+    ['Konum', this.location]
+  ];
+};
+Car.prototype.metaLine = function(){ return this.km.toLocaleString('tr-TR') + ' km · ' + this.trans + ' · ' + this.location; };
+
+export function Land(base){
+  Listing.call(this, Object.assign({category:'arsa'}, base));
+}
+Land.prototype = Object.create(Listing.prototype);
+Land.prototype.thumb = function(){ return IMG.landThumb(this); };
+Land.prototype.hero = function(){ return IMG.landHero(this); };
+Land.prototype.imgFilter = function(){ return IMG.landFilter(this); };
+Land.prototype.specRows = function(){
+  return [
+    ['m²', this.m2.toLocaleString('tr-TR')],
+    ['İmar Durumu', this.imar],
+    ['Ada / Parsel', this.adaParsel],
+    ['Konum', this.location]
+  ];
+};
+Land.prototype.metaLine = function(){ return this.m2 + ' m² · ' + this.imar + ' · ' + this.location; };
+
+export function Shop(base){
+  Listing.call(this, Object.assign({category:'dukkan'}, base));
+  this.slots = [];
+  this.upgrades = [];
+  this.rentMult = 1;
+  this.passiveBonus = 0;
+  this.saleBonus = 1;
+  this.satisfactionGuard = false;
+  this.mode = 'kendim';
+  this.tenant = null;
+  this.tenantCandidate = null;
+}
+Shop.prototype = Object.create(Listing.prototype);
+Shop.prototype.thumb = function(){ return IMG.shopThumb(this); };
+Shop.prototype.hero = function(){ return IMG.shopHero(this); };
+Shop.prototype.imgFilter = function(){ return IMG.shopFilter(this); };
+Shop.prototype.specRows = function(){
+  return [
+    ['Tür', this.shopType==='galeri' ? 'Oto Galerisi (araba kabul eder)' : 'Emlak Ofisi (arsa kabul eder)'],
+    ['Aylık Kira', fmt(this.rent)],
+    ['Vitrin Kapasitesi', this.capacity + ' ürün'],
+    ['Konum', this.location]
+  ];
+};
+Shop.prototype.metaLine = function(){ return (this.shopType==='galeri' ? 'Oto Galerisi' : 'Emlak Ofisi') + ' · kira ' + fmt(this.rent) + ' · ' + this.location; };
