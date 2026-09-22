@@ -16,6 +16,7 @@ export function Listing(props){
   this.listedPrice = 0;
   this.daysListed = 0;
   this.pendingOffer = null;
+  this.favorite = false;
 }
 Listing.prototype.currentValue = function(){
   var remainingLoss = this.faults.filter(function(f){return !f.fixed;}).reduce(function(s,f){return s+f.loss;},0);
@@ -48,20 +49,30 @@ Car.prototype.metaLine = function(){ return this.km.toLocaleString('tr-TR') + ' 
 
 export function Land(base){
   Listing.call(this, Object.assign({category:'arsa'}, base));
+  // ev inşaatı durumu (bkz. GameController.doStartConstruction)
+  this.hasHouse = false;
+  this.underConstruction = false;
+  this.constructionDaysLeft = 0;
 }
 Land.prototype = Object.create(Listing.prototype);
-Land.prototype.thumb = function(){ return IMG.landThumb(this); };
-Land.prototype.hero = function(){ return IMG.landHero(this); };
-Land.prototype.imgFilter = function(){ return IMG.landFilter(this); };
+Land.prototype.thumb = function(){ return this.hasHouse ? IMG.landHouseThumb(this) : IMG.landThumb(this); };
+Land.prototype.hero = function(){ return this.hasHouse ? IMG.landHouseHero(this) : IMG.landHero(this); };
+Land.prototype.imgFilter = function(){ return this.hasHouse ? '' : IMG.landFilter(this); };
 Land.prototype.specRows = function(){
-  return [
+  var rows = [
     ['m²', this.m2.toLocaleString('tr-TR')],
     ['İmar Durumu', this.imar],
     ['Ada / Parsel', this.adaParsel],
     ['Konum', this.location]
   ];
+  if(this.hasHouse) rows.push(['Yapı', 'Üzerinde ev inşa edilmiş']);
+  else if(this.underConstruction) rows.push(['Yapı', 'İnşaat sürüyor (' + this.constructionDaysLeft + ' gün kaldı)']);
+  return rows;
 };
-Land.prototype.metaLine = function(){ return this.m2 + ' m² · ' + this.imar + ' · ' + this.location; };
+Land.prototype.metaLine = function(){
+  var tag = this.hasHouse ? 'Üzerinde ev var · ' : this.underConstruction ? 'İnşaat sürüyor · ' : '';
+  return tag + this.m2 + ' m² · ' + this.imar + ' · ' + this.location;
+};
 
 export function Shop(base){
   Listing.call(this, Object.assign({category:'dukkan'}, base));

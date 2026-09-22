@@ -28,6 +28,8 @@ export const IMG = {
 
   landThumb: function(item){ return 'img/land.png'; },
   landHero: function(item){ return 'img/land.png'; },
+  landHouseThumb: function(item){ return 'img/land_house.png'; },
+  landHouseHero: function(item){ return 'img/land_house.png'; },
   landFilter: function(item){ return 'hue-rotate(' + hueForId(item.id) + 'deg) saturate(0.9)'; },
 
   shopThumb: function(item){ return item.shopType==='galeri' ? 'img/shop_galeri.png' : 'img/shop_emlak.png'; },

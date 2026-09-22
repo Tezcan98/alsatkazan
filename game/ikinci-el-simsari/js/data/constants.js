@@ -241,3 +241,12 @@ export const LOAN_TIERS = [
   { amount: sc(500000), dailyRate: 0.022, dailyPaymentRate: 0.065 },
   { amount: sc(1000000), dailyRate: 0.026, dailyPaymentRate: 0.06 }
 ];
+
+// ---- Arsaya Ev Dikme ----
+// Sahip olunan arsaya inşaat başlatılabilir; maliyet m²'ye göre hesaplanır,
+// inşaat gün geçişleriyle ilerler ve bittiğinde arsanın değerini belirgin
+// biçimde artırır (yatırım getirisi mantığı).
+export const CONSTRUCTION_COST_PER_M2 = sc(3500);
+export const CONSTRUCTION_DAYS_MIN = 4;
+export const CONSTRUCTION_DAYS_MAX = 7;
+export const CONSTRUCTION_VALUE_MULT = 1.7; // inşaat bitince eklenen değer = maliyet × bu çarpan

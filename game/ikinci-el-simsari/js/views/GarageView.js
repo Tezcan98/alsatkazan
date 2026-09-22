@@ -56,6 +56,8 @@ export var GarageView = {
       var ownerShop = item.shopId ? state.shops.find(function(s){return s.id===item.shopId;}) : null;
       if(ownerShop) statusParts.push('Vitrinde: ' + ownerShop.title);
       if(item.forSale) statusParts.push('Satışta (' + item.daysListed + ' gündür, ' + fmt(item.listedPrice) + ')');
+      if(item.category==='arsa' && item.hasHouse) statusParts.push('Üzerinde ev var.');
+      else if(item.category==='arsa' && item.underConstruction) statusParts.push('İnşaat sürüyor (' + item.constructionDaysLeft + ' gün kaldı).');
       status.textContent = statusParts.join(' ');
       card.appendChild(status);
 
@@ -100,6 +102,8 @@ export var GarageView = {
         unlistBtn.textContent = 'Satıştan Kaldır';
         unlistBtn.onclick = function(){ Game.doUnlist(item.id); };
         row.appendChild(unlistBtn);
+      } else if(item.category==='arsa' && item.underConstruction){
+        // satış devre dışı, inşaat sürüyor
       } else if(!ownerShop){
         var sellBtn = document.createElement('button');
         sellBtn.className = 'btn-navy btn-sm';
@@ -107,6 +111,14 @@ export var GarageView = {
         sellBtn.disabled = OperationManager.isBusy();
         sellBtn.onclick = function(){ Game.doListForSale(item.id, item.currentValue()); };
         row.appendChild(sellBtn);
+      }
+      if(item.category==='arsa' && !item.hasHouse && !item.underConstruction && !item.forSale){
+        var buildBtn = document.createElement('button');
+        buildBtn.className = 'btn-orange btn-sm';
+        buildBtn.textContent = 'Ev İnşa Et';
+        buildBtn.disabled = OperationManager.isBusy();
+        buildBtn.onclick = function(){ Game.doStartConstruction(item.id); };
+        row.appendChild(buildBtn);
       }
       card.appendChild(row);
 

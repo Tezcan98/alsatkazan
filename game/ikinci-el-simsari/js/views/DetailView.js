@@ -26,8 +26,15 @@ export var DetailView = {
     oh.appendChild(back);
     var t = document.createElement('div');
     t.style.fontWeight = '700';
+    t.style.flex = '1 1 auto';
     t.textContent = item.category==='araba' ? 'Araba İlanı' : item.category==='dukkan' ? 'Dükkan İlanı' : 'Arsa İlanı';
     oh.appendChild(t);
+    if(!item.owned){
+      var favBtn = document.createElement('button');
+      favBtn.textContent = item.favorite ? '★ Favoride' : '☆ Favorile';
+      favBtn.onclick = function(){ Game.toggleFavorite(item.id); };
+      oh.appendChild(favBtn);
+    }
     overlay.appendChild(oh);
 
     var body = document.createElement('div');
@@ -128,6 +135,12 @@ export var DetailView = {
       note.style.width = '100%';
       note.textContent = 'İlanda: ' + fmt(item.listedPrice) + ' — ' + item.daysListed + ' gündür satışta, alıcı bekleniyor.';
       actions.appendChild(note);
+    } else if(item.underConstruction){
+      var constrNote = document.createElement('div');
+      constrNote.className = 'desc-note';
+      constrNote.style.width = '100%';
+      constrNote.textContent = 'İnşaat sürüyor — ' + item.constructionDaysLeft + ' gün kaldı. İnşaat bitene kadar satışa çıkarılamaz.';
+      actions.appendChild(constrNote);
     } else {
       var sellBtn = document.createElement('button');
       sellBtn.className = 'btn-navy';
@@ -137,6 +150,28 @@ export var DetailView = {
       actions.appendChild(sellBtn);
     }
     body.appendChild(actions);
+
+    if(item.owned && item.category==='arsa' && !item.forSale){
+      var constrCard = document.createElement('div');
+      constrCard.className = 'card';
+      constrCard.style.marginBottom = '16px';
+      if(item.hasHouse){
+        constrCard.innerHTML = '<div class="kicker">Yapı Durumu</div><div style="margin-top:4px;font-size:0.85rem;">Bu arsanın üzerinde artık bir ev var — değeri kalıcı olarak arttı.</div>';
+      } else if(item.underConstruction){
+        constrCard.innerHTML = '<div class="kicker">Yapı Durumu</div><div style="margin-top:4px;font-size:0.85rem;">İnşaat sürüyor — <b>' + item.constructionDaysLeft + ' gün</b> kaldı.</div>';
+      } else {
+        var constrDesc = TransactionManager.startConstruction(player, item, 5);
+        constrCard.innerHTML = '<div class="kicker">Yapı Durumu</div><div style="margin-top:4px;font-size:0.85rem;">Bu arsaya ev inşa ettirebilirsin — maliyet m² başına hesaplanır, bitince arsanın değeri belirgin şekilde artar.</div>';
+        var constrBtn = document.createElement('button');
+        constrBtn.className = 'btn-orange btn-sm';
+        constrBtn.style.marginTop = '8px';
+        constrBtn.textContent = 'Ev İnşa Et (~' + fmt(constrDesc.cost) + ')';
+        constrBtn.disabled = busy || player.balance < constrDesc.cost;
+        constrBtn.onclick = function(){ Game.doStartConstruction(item.id); };
+        constrCard.appendChild(constrBtn);
+      }
+      body.appendChild(constrCard);
+    }
 
     if(item.owned && item.pendingOffer){
       var offerCard = document.createElement('div');

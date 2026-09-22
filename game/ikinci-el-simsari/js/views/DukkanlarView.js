@@ -232,7 +232,7 @@ export var DukkanlarView = {
         });
       }
 
-      var candidates = state.inventory.filter(function(i){ return i.category===shop.accepts && !i.shopId; });
+      var candidates = state.inventory.filter(function(i){ return i.category===shop.accepts && !i.shopId && !i.underConstruction; });
       if(candidates.length>0 && shop.slots.length < shop.capacity){
         var addSel = document.createElement('div');
         addSel.style.marginTop = '10px';

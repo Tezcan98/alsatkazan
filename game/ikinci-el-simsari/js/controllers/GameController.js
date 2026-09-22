@@ -7,7 +7,8 @@ import { ConfirmDialog } from '../services/ConfirmDialog.js';
 import {
   CAR_QUESTIONS, ARSA_QUESTIONS, USTALAR, MASRAF_OPTIONS,
   TENANT_NAMES, TENANT_BUSINESS_ARABA, TENANT_BUSINESS_ARSA,
-  BUYER_NAMES, BUYER_DISCOUNT_LINES, PRICE_SCALE, LOAN_TIERS
+  BUYER_NAMES, BUYER_DISCOUNT_LINES, PRICE_SCALE, LOAN_TIERS,
+  CONSTRUCTION_COST_PER_M2, CONSTRUCTION_DAYS_MIN, CONSTRUCTION_DAYS_MAX, CONSTRUCTION_VALUE_MULT
 } from '../data/constants.js';
 
 function sc(n){ return Math.round(n*PRICE_SCALE); }
@@ -30,6 +31,9 @@ export var Game = {
     log: [],
     tab: "listings",
     listingFilter: "hepsi",
+    listingSort: "varsayilan",
+    priceMin: "",
+    priceMax: "",
     openDetailId: null,
     openShopId: null,
     controlPanelOpen: false
@@ -53,6 +57,14 @@ export var Game = {
   findListing: function(id){ return this.state.listings.find(function(l){return l.id===id;}); },
   findInv: function(id){ return this.state.inventory.find(function(l){return l.id===id;}); },
   findAny: function(id){ return this.findListing(id) || this.findInv(id); },
+
+  toggleFavorite: function(id){
+    var item = this.findAny(id);
+    if(!item) return;
+    item.favorite = !item.favorite;
+    toast(item.favorite ? 'Favorilere eklendi.' : 'Favorilerden çıkarıldı.');
+    this.render();
+  },
 
   // ---- genel işlem çalıştırıcı: TransactionManager'dan tanım alır,
   //      onaya sorar, süre bekletir, sonra efekt uygular ----
@@ -243,6 +255,7 @@ export var Game = {
     var self = this, state = this.state, player = this.player;
     var item = this.findInv(id);
     if(!item || item.forSale) return;
+    if(item.underConstruction){ toast('İnşaat sürerken bu arsa satışa çıkarılamaz.'); return; }
     var askPrice = Math.max(500, Math.round(price || item.currentValue()));
     var desc = TransactionManager.listForSale(player, item, askPrice);
     this.perform(desc, function(){
@@ -263,6 +276,26 @@ export var Game = {
     item.pendingOffer = null;
     this.addLog(item.title + ' satıştan kaldırıldı.');
     this.render();
+  },
+
+  // ---- Arsaya ev dikme ----
+  doStartConstruction: function(id){
+    var self = this, player = this.player;
+    var land = this.findInv(id);
+    if(!land || land.category!=='arsa') return;
+    if(land.hasHouse){ toast('Bu arsada zaten ev var.'); return; }
+    if(land.underConstruction){ toast('İnşaat zaten sürüyor.'); return; }
+    if(land.forSale){ toast('Önce satıştan kaldırmalısın.'); return; }
+    var days = rnd(CONSTRUCTION_DAYS_MIN, CONSTRUCTION_DAYS_MAX+1);
+    var desc = TransactionManager.startConstruction(player, land, days);
+    this.perform(desc, function(){
+      player.spend(desc.cost);
+      land.underConstruction = true;
+      land.constructionDaysLeft = days;
+      self.addLog('İnşaat başladı: ' + land.title + ' — ' + fmt(desc.cost) + ' (' + days + ' gün sürecek)', 'neg');
+      toast('İnşaat başladı, ' + days + ' gün sürecek.');
+      self.render();
+    });
   },
 
   // Envanterdeki bir ürünün nihai satışını tamamlar (ortak mantık):
@@ -315,6 +348,7 @@ export var Game = {
     if(item.category !== shop.accepts){ toast('Bu dükkan bu türü kabul etmiyor.'); return; }
     if(shop.slots.length >= shop.capacity){ toast('Vitrin dolu.'); return; }
     if(item.shopId){ toast('Bu ürün zaten bir vitrinde.'); return; }
+    if(item.underConstruction){ toast('İnşaat sürerken bu arsa vitrine konamaz.'); return; }
     shop.slots.push(item.id);
     item.shopId = shop.id;
     this.addLog(item.title + ' vitrine kondu: ' + shop.title);
@@ -514,8 +548,25 @@ export var Game = {
     var desc = TransactionManager.nextDay(player);
     this.perform(desc, function(){
       state.day += 1;
-      state.listings = Market.refreshListings();
+      // Favorilenen ilanlar günlük yenilemede kaybolmasın diye korunur,
+      // yeni ilan havuzunun başına eklenir.
+      var keptFavorites = state.listings.filter(function(l){ return l.favorite; });
+      state.listings = keptFavorites.concat(Market.refreshListings());
       state.partsMarket = Market.refreshPartsMarket();
+
+      // ---- Arsalarda süren inşaatlar ----
+      state.inventory.filter(function(i){ return i.category==='arsa' && i.underConstruction; }).forEach(function(land){
+        land.constructionDaysLeft -= 1;
+        if(land.constructionDaysLeft <= 0){
+          land.underConstruction = false;
+          land.hasHouse = true;
+          var addedValue = Math.round(land.m2 * CONSTRUCTION_COST_PER_M2 * CONSTRUCTION_VALUE_MULT);
+          land.trueValue += addedValue;
+          land.title = land.title.replace(' Arsa', '') + ' — Üzerinde Ev Var';
+          self.addLog('İnşaat tamamlandı: ' + land.title + ' — değeri ' + fmt(addedValue) + ' arttı!', 'pos');
+          toast('İnşaat bitti! ' + land.title);
+        }
+      });
 
       if(player.loan){
         var loan = player.loan;

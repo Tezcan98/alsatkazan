@@ -1,5 +1,5 @@
 import { clamp, fmt } from '../utils.js';
-import { INSPECT_RATE, MIN_INSPECT, SKILL_XP_PER_LEVEL } from '../data/constants.js';
+import { INSPECT_RATE, MIN_INSPECT, SKILL_XP_PER_LEVEL, CONSTRUCTION_COST_PER_M2 } from '../data/constants.js';
 
 // =====================================================================
 //  İŞLEM YÖNETİCİSİ — tüm ücret / süre / risk hesapları burada
@@ -112,6 +112,23 @@ export var TransactionManager = {
       riskLabel:'Risksiz — fiyat üzerinde anlaşıldı.',
       confirmLabel:'Teklifi Kabul Et',
       phases:['Alıcıya onay veriliyor…','Ödeme alınıyor…','Devir tamamlanıyor…']
+    };
+  },
+
+  // --- Arsaya ev inşaatı başlat ---
+  startConstruction: function(player, land, days){
+    var cost = Math.round(land.m2 * CONSTRUCTION_COST_PER_M2);
+    var hours = 1.5;
+    return {
+      type:'START_CONSTRUCTION',
+      title:'Ev İnşaatı Başlat',
+      message: land.title + ' üzerine ' + land.m2 + ' m² için müteahhitle inşaat sözleşmesi imzalanacak. İnşaat ' + days + ' gün sürecek.',
+      cost: cost,
+      durationMs: this.hoursToRealMs(hours),
+      durationLabel: this.hoursLabel(hours) + ' (sözleşme) + ' + days + ' gün inşaat',
+      riskLabel:'Risksiz — inşaat süresi boyunca arsa satılamaz.',
+      confirmLabel:'İnşaatı Başlat',
+      phases:['Müteahhitle görüşülüyor…','Sözleşme imzalanıyor…','Şantiye kuruluyor…']
     };
   },
 
