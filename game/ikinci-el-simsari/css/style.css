@@ -328,13 +328,9 @@ nav.bottombar.nav-busy:before{
 .busybar .bbtrack{ position:absolute; left:0; right:0; bottom:0; height:3px; background:rgba(255,255,255,0.15); }
 .busybar .bbfill{ height:100%; background:var(--orange); width:0%; transition:width 0.1s linear; }
 
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --page:#15191d; --card:#1e2328; --border:#333a41; --border-soft:#2a3036; --ink:#e7e9ea; --ink-soft:#9aa4ad; --ink-faint:#727b83;
-    --navy:#2a3c52; --navy-dark:#141c26; --orange:#ffb400;
-  }
-  .listrow h3, .card h3, .usta-card h3, .detail-title, .panel-tile-body h3{ color:#eaf0f7; }
-  .spec-table td:first-child{ background:#242a30; }
-  .modal-box{ background:#20262c; }
-  .modal-box h3{ color:#eaf0f7; }
-}
+/* Bu sayfa kasıtlı olarak her zaman klasik "beyaz sahibinden formu"
+   temasında kalır — sistem karanlık moduna göre otomatik geçiş yapmaz.
+   (Gerçek sahibinden.com'un da karanlık teması yoktur; sistem karanlık
+   modunda yarım güncellenmiş renkler birbirine karışıp çirkin bir
+   görüntü verdiği için bilinçli olarak kapatıldı.) */
+:root{ color-scheme: light; }
