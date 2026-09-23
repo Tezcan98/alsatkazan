@@ -196,6 +196,9 @@ h2.section .count{ font-size:0.72rem; color:var(--ink-faint); font-weight:normal
 .bubble{ max-width:88%; padding:8px 12px; border-radius:10px; margin-bottom:8px; font-size:0.84rem; line-height:1.4; }
 .bubble.me{ background:var(--navy); color:#fff; margin-left:auto; border-bottom-right-radius:2px; }
 .bubble.seller{ background:var(--card); border:1px solid var(--border); margin-right:auto; border-bottom-left-radius:2px; }
+.sbm-wrap{ max-width:88%; margin-right:auto; margin-bottom:8px; }
+.sbm-label{ font-size:0.68rem; font-weight:800; color:var(--ink-soft); letter-spacing:0.4px; margin:0 0 3px 2px; }
+.bubble.sbm{ background:#eef3ea; border:1px solid #cfe0c8; color:#28331f; border-bottom-left-radius:2px; margin-bottom:0; max-width:100%; }
 
 /* ---- garaj / ustalar / defter kartları ---- */
 .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:11px; }

@@ -56,6 +56,7 @@ document.querySelectorAll('#bottombar button').forEach(function(b){
     Game.state.tab = b.dataset.tab;
     Game.state.openShopId = null;
     Game.state.openDetailId = null;
+    Game.state.openMessageThreadItemId = null;
     render();
   };
 });

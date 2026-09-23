@@ -1,7 +1,7 @@
 import { clamp, fmt } from '../utils.js';
 import {
-  INSPECT_RATE, MIN_INSPECT, SKILL_XP_PER_LEVEL, CONSTRUCTION_COST_PER_M2,
-  INSPECT_MISS_CHANCE, FULL_INSPECT_RATE, MIN_FULL_INSPECT,
+  SKILL_XP_PER_LEVEL, CONSTRUCTION_COST_PER_M2,
+  INSPECT_MISS_CHANCE, EKSPERTIZ_BASE_COST, TRAMER_COST, TRAMER_MISS_CHANCE,
   BOOST_COST, BOOST_DAYS, KASKO_DAILY_RATE, KASKO_MIN_DAILY
 } from '../data/constants.js';
 
@@ -25,42 +25,43 @@ export var TransactionManager = {
     return '≈ ' + (Math.round(hours*10)/10) + ' saat';
   },
 
-  // --- Ekspertiz (ucuz ama bazen bir arızayı kaçırabilir) ---
+  // --- Ekspertiz (kapsamlı yerinde inceleme — pahalı, nadiren bir şey kaçırır) ---
   inspection: function(player, item){
     var lvl = this.skillLevel(player.skills.ekspertiz);
     var discount = clamp(lvl*0.03, 0, 0.4);
-    var cost = Math.max(MIN_INSPECT, Math.round(item.askingPrice*INSPECT_RATE*(1-discount)));
+    var cost = Math.round(EKSPERTIZ_BASE_COST*(1-discount));
     var hours = 1;
     var missChance = clamp(INSPECT_MISS_CHANCE - lvl*0.01, 0.03, INSPECT_MISS_CHANCE);
     return {
       type:'INSPECT',
       title:'Ekspertiz Yaptır',
-      message: item.title + ' için bağımsız ekspertiz raporu istiyorsun.',
+      message: item.title + ' için yerinde bağımsız ekspertiz raporu istiyorsun (motor, boya, değişen).',
       cost: cost,
       durationMs: this.hoursToRealMs(hours),
       durationLabel: this.hoursLabel(hours),
-      riskLabel:'Standart ekspertiz — her arızayı bulma ihtimali %' + Math.round((1-missChance)*100) + '. %100 garantili sonuç için TRAMER Tam Rapor kullan.',
+      riskLabel:'Yerinde inceleme — her arızayı bulma ihtimali %' + Math.round((1-missChance)*100) + '. Ağır hasar/kaza kaydı için ayrıca TRAMER sorgulanmalı.',
       confirmLabel:'Ekspertize Gönder',
       missChance: missChance,
       phases:['Randevu alınıyor…','Araç/arsa yerinde inceleniyor…','Rapor yazılıyor…']
     };
   },
 
-  // --- TRAMER Tam Rapor (pahalı ama hiçbir şeyi kaçırmaz) ---
-  fullInspection: function(player, item){
-    var cost = Math.max(MIN_FULL_INSPECT, Math.round(item.askingPrice*FULL_INSPECT_RATE));
-    var hours = 2;
+  // --- TRAMER Kaydı Sorgula (SBM üzerinden ucuz/hızlı resmi kaza kaydı) ---
+  tramerQuery: function(player, item){
+    var lvl = this.skillLevel(player.skills.ekspertiz);
+    var discount = clamp(lvl*0.03, 0, 0.4);
+    var cost = Math.round(TRAMER_COST*(1-discount));
+    var hours = 0.4;
     return {
-      type:'FULL_INSPECT',
-      title:'TRAMER Tam Rapor',
-      message: item.title + ' için resmi kayıt sorgusu dahil eksiksiz bir ekspertiz raporu istiyorsun.',
+      type:'TRAMER_QUERY',
+      title:'TRAMER Kaydı Sorgula',
+      message: item.title + ' için SBM üzerinden resmi TRAMER kaza kaydı sorgulanacak.',
       cost: cost,
       durationMs: this.hoursToRealMs(hours),
       durationLabel: this.hoursLabel(hours),
-      riskLabel:'Risksiz — hiçbir arıza gözden kaçmaz, %100 doğru sonuç.',
-      confirmLabel:'Tam Rapor İste',
-      missChance: 0,
-      phases:['Şasi/resmi kayıtlar sorgulanıyor…','Cihazla boya/değişen ölçümü yapılıyor…','Rapor onaylanıyor…']
+      riskLabel:'Ucuz ve hızlı ama her kaza sigortaya bildirilmemiş olabilir — TRAMER kaydında bazı kazalar görünmeyebilir (~%' + Math.round(TRAMER_MISS_CHANCE*100) + ').',
+      confirmLabel:'SBM Sorgusu Yap',
+      phases:['SBM sistemine bağlanılıyor…','Şasi/plaka sorgulanıyor…','Sonuç SMS ile geliyor…']
     };
   },
 

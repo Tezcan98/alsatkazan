@@ -21,8 +21,10 @@ export function Listing(props){
   // ilan doping (bkz. GameController.doBoostListing)
   this.boosted = false;
   this.boostDaysLeft = 0;
-  // ekspertiz kalitesi: 'none' | 'normal' (kaçırma riski var) | 'full' (TRAMER, %100)
-  this.inspectionQuality = 'none';
+  // ekspertiz yaptırıldı mı (motor/boya/diğer arızaları açar)
+  this.ekspertizDone = false;
+  // TRAMER kaydı sorgulandı mı (sadece araba — ağır hasar kayıtlarını açar)
+  this.tramerDone = false;
 }
 Listing.prototype.currentValue = function(){
   var remainingLoss = this.faults.filter(function(f){return !f.fixed;}).reduce(function(s,f){return s+f.loss;},0);

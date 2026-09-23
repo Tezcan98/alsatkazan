@@ -32,7 +32,7 @@ export var Market = {
         tag:'boya', partKey: part.key,
         label: sd.label + ' ' + part.label,
         loss: rnd(sd.loss[0], sd.loss[1]), repairCost: rnd(sd.repair[0], sd.repair[1]),
-        fixed:false, heavy:false
+        fixed:false, heavy:false, hidden:true
       });
     }
     return partStatus;
@@ -48,6 +48,17 @@ export var Market = {
       usage.charAt(0).toUpperCase() + usage.slice(1) + '. ' + extra + ' ' + closing;
   },
 
+  // sahibinden'deki gibi "34 ABC 123" formatında rastgele plaka üretir.
+  makePlate: function(){
+    var cityCode = String(rnd(1,82)).padStart(2,'0');
+    var letters = '';
+    var letterCount = rnd(2,4);
+    for(var i=0;i<letterCount;i++) letters += "ABCDEFGHIJKLMNOPRSTUVYZ"[Math.floor(Math.random()*23)];
+    var digitCount = letterCount===1 ? 4 : letterCount===2 ? 3 : 2;
+    var digits = String(rnd(0, Math.pow(10,digitCount))).padStart(digitCount,'0');
+    return cityCode + ' ' + letters + ' ' + digits;
+  },
+
   makeCar: function(){
     var year = rnd(2011, 2023);
     var kmBase = (2026 - year) * rnd(9000, 22000);
@@ -57,11 +68,11 @@ export var Market = {
     for(var i=0;i<faultCount && pool.length>0;i++){
       var idx = Math.floor(Math.random()*pool.length);
       var f = pool.splice(idx,1)[0];
-      faults.push({ tag:f.tag, label:f.label, loss:rnd(f.loss[0],f.loss[1]), repairCost:rnd(f.repair[0],f.repair[1]), fixed:false, heavy:false });
+      faults.push({ tag:f.tag, label:f.label, loss:rnd(f.loss[0],f.loss[1]), repairCost:rnd(f.repair[0],f.repair[1]), fixed:false, heavy:false, hidden:true });
     }
     var partStatus = this.makePartStatus(faults);
     if(Math.random() < 0.10){
-      faults.push({ tag:HEAVY_FAULT.tag, label:HEAVY_FAULT.label, loss:rnd(HEAVY_FAULT.loss[0],HEAVY_FAULT.loss[1]), repairCost:rnd(HEAVY_FAULT.repair[0],HEAVY_FAULT.repair[1]), fixed:false, heavy:true });
+      faults.push({ tag:HEAVY_FAULT.tag, label:HEAVY_FAULT.label, loss:rnd(HEAVY_FAULT.loss[0],HEAVY_FAULT.loss[1]), repairCost:rnd(HEAVY_FAULT.repair[0],HEAVY_FAULT.repair[1]), fixed:false, heavy:true, hidden:true });
     }
     var yearFactor = 0.55 + (year-2011) * 0.045;
     var baseValue = Math.round(rnd(170000,260000) * PRICE_SCALE * yearFactor);
@@ -78,6 +89,8 @@ export var Market = {
       location: pick(CITIES),
       description: this.buildCarDescription(),
       partStatus: partStatus,
+      plate: this.makePlate(),
+      chassisSuffix: String(rnd(1000,10000)),
       trueValue: baseValue, askingPrice: askingPrice, faults: faults, sellerHonesty: Math.random()
     });
   },
@@ -92,7 +105,7 @@ export var Market = {
     for(var i=0;i<issueCount && pool.length>0;i++){
       var idx = Math.floor(Math.random()*pool.length);
       var it = pool.splice(idx,1)[0];
-      issues.push({ tag:it.tag, label:it.label, loss:rnd(it.loss[0], it.loss[1]) });
+      issues.push({ tag:it.tag, label:it.label, loss:rnd(it.loss[0], it.loss[1]), hidden:true });
     }
     var totalLoss = issues.reduce(function(s,f){return s+f.loss;},0);
     var askingBase = baseValue - totalLoss;

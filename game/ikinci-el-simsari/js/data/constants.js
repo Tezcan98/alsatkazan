@@ -230,18 +230,6 @@ export const USTALAR = [
   {id:"yetkili", name:"Yetkili Servis", desc:"Pahalı ama garantili iş çıkarır.", priceMult:1.7, baseSuccess:0.97, heavyPenalty:0.10, hours:5}
 ];
 
-export const INSPECT_RATE = 0.02;
-export const MIN_INSPECT = sc(400);
-
-// ---- Banka Kredisi ----
-// Kontrol Paneli → Profil altından çekilebilen sabit tutarlı krediler;
-// her gün geçişinde faiz işler ve otomatik asgari ödeme düşülür.
-export const LOAN_TIERS = [
-  { amount: sc(200000), dailyRate: 0.018, dailyPaymentRate: 0.07 },
-  { amount: sc(500000), dailyRate: 0.022, dailyPaymentRate: 0.065 },
-  { amount: sc(1000000), dailyRate: 0.026, dailyPaymentRate: 0.06 }
-];
-
 // ---- Arsaya Ev Dikme ----
 // Sahip olunan arsaya inşaat başlatılabilir; maliyet m²'ye göre hesaplanır,
 // inşaat gün geçişleriyle ilerler ve bittiğinde arsanın değerini belirgin
@@ -267,13 +255,28 @@ export const DEAL_CHANCE = 0.45;
 export const DEAL_DISCOUNT_MIN = 0.18;
 export const DEAL_DISCOUNT_MAX = 0.34;
 
-// ---- Ekspertiz riski & TRAMER Tam Rapor ----
-// Ucuz ekspertiz bazen bir arızayı gözden kaçırabilir (gerçek hayattaki
-// gibi) — kaçırılan arıza satın alma sonrası "kazık" olarak ortaya çıkar.
-// Pahalı TRAMER usulü tam rapor hiçbir şeyi kaçırmaz.
+// ---- Ekspertiz riski & TRAMER Kaydı Sorgula ----
+// Ekspertiz, aracı fiziksel olarak yerinde inceleyen kapsamlı (ve bu
+// yüzden pahalı) bir hizmettir — mekanik/elektrik/boya arızalarını
+// ortaya çıkarır ama nadiren bir şeyi gözden kaçırabilir.
+// TRAMER ise SBM'nin resmi kaza kaydı sorgusudur: ucuz ve hızlıdır ama
+// sadece sigortaya bildirilmiş kazaları gösterir — gerçek hayatta olduğu
+// gibi her kaza sigortaya bildirilmez, bu yüzden ağır hasar kayıtlarının
+// bir kısmı TRAMER sorgusunda görünmeyebilir (TRAMER_MISS_CHANCE).
 export const INSPECT_MISS_CHANCE = 0.16;
-export const FULL_INSPECT_RATE = 0.05; // askingPrice'ın yüzdesi
-export const MIN_FULL_INSPECT = sc(2500);
+export const EKSPERTIZ_BASE_COST = sc(8000);
+export const TRAMER_COST = sc(2000);
+export const TRAMER_MISS_CHANCE = 0.30;
+
+// SBM'nin TRAMER sorgu sonucunda gönderdiği SMS'teki kaza tipi kodları.
+export const TRAMER_KAZA_TYPES = [
+  {code:'KTT', reason:'Carpma'},
+  {code:'ERP', reason:'Carpisma'},
+  {code:'YKL', reason:'Yan Yatma'},
+  {code:'DVL', reason:'Devrilme'},
+  {code:'YNG', reason:'Yanma'},
+  {code:'SLP', reason:'Selden Etkilenme'}
+];
 
 // ---- İlan Doping (Öne Çıkar) ----
 // sahibinden.com'un imza özelliği: ücret karşılığında kendi ilanını öne

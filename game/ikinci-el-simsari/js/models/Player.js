@@ -5,13 +5,15 @@ import { SKILL_LABELS, SKILL_XP_PER_LEVEL } from '../data/constants.js';
 //  OYUNCU (Model katmanı)
 // =====================================================================
 export function Player(){
-  this.balance = 2500000;
-  this.startBalance = 2500000;
+  this.balance = 25000000;
+  this.startBalance = 25000000;
   this.skills = { tamir:0, pazarlik:0, ekspertiz:0, isletme:0, sabir:0 };
   this.name = 'Simsar';
   this.totalSales = 0;
   this.totalProfit = 0;
-  this.loan = null; // { amount, remaining, dailyRate, dailyPayment }
+  this.carsSold = 0;
+  this.arsaSold = 0;
+  this.dukkanSold = 0;
   this.achievements = [];
 }
 Player.prototype.skillLevel = function(key){

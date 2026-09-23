@@ -2,7 +2,6 @@ import { fmt } from '../utils.js';
 import { Game } from '../controllers/GameController.js';
 import { TransactionManager } from '../services/TransactionManager.js';
 import { OperationManager } from '../services/OperationManager.js';
-import { CAR_QUESTIONS, ARSA_QUESTIONS } from '../data/constants.js';
 import { buildCarPartsDiagram } from './CarPartsDiagram.js';
 
 // =====================================================================
@@ -122,10 +121,10 @@ export var DetailView = {
         });
         body.appendChild(ul);
       }
-      if(!item.owned && item.inspectionQuality==='normal'){
+      if(!item.owned && item.ekspertizDone && item.category==='araba' && !item.tramerDone){
         var qnote = document.createElement('div');
         qnote.className = 'desc-note';
-        qnote.textContent = 'Standart ekspertiz — bir şeyler gözden kaçmış olabilir. Garantili sonuç için TRAMER Tam Rapor iste.';
+        qnote.textContent = 'Ekspertiz mekanik/boya arızalarını gösterir ama ağır hasar kaydı için ayrıca TRAMER sorgulaman gerekir.';
         body.appendChild(qnote);
       }
     }
@@ -133,22 +132,23 @@ export var DetailView = {
     var actions = document.createElement('div');
     actions.className = 'action-row';
     if(!item.owned){
-      if(item.category!=='dukkan' && !item.inspected){
+      if(item.category!=='dukkan' && !item.ekspertizDone){
         var insDesc = TransactionManager.inspection(player, item);
         var insBtn = document.createElement('button');
         insBtn.className = 'btn-ghost';
         insBtn.textContent = 'Ekspertiz Yaptır (' + fmt(insDesc.cost) + ')';
         insBtn.disabled = busy;
-        insBtn.onclick = function(){ Game.doInspect(item.id, false); };
+        insBtn.onclick = function(){ Game.doInspect(item.id); };
         actions.appendChild(insBtn);
-
-        var fullDesc = TransactionManager.fullInspection(player, item);
-        var fullBtn = document.createElement('button');
-        fullBtn.className = 'btn-ghost';
-        fullBtn.textContent = 'TRAMER Tam Rapor (' + fmt(fullDesc.cost) + ')';
-        fullBtn.disabled = busy;
-        fullBtn.onclick = function(){ Game.doInspect(item.id, true); };
-        actions.appendChild(fullBtn);
+      }
+      if(item.category==='araba' && !item.tramerDone){
+        var tramerDesc = TransactionManager.tramerQuery(player, item);
+        var tramerBtn = document.createElement('button');
+        tramerBtn.className = 'btn-ghost';
+        tramerBtn.textContent = 'TRAMER Kaydı Sorgula (' + fmt(tramerDesc.cost) + ')';
+        tramerBtn.disabled = busy;
+        tramerBtn.onclick = function(){ Game.doTramerQuery(item.id); };
+        actions.appendChild(tramerBtn);
       }
       var buyBtn = document.createElement('button');
       buyBtn.className = 'btn-orange';
@@ -252,42 +252,24 @@ export var DetailView = {
       body.appendChild(offerCard);
     }
 
-    if(item.category!=='dukkan' && (!item.owned || item.messages.length>0)){
-      var chatbox = document.createElement('div');
-      chatbox.className = 'chatbox';
-      var chatTitle = document.createElement('h2');
-      chatTitle.className = 'section';
-      chatTitle.textContent = 'Mesajlar';
-      chatbox.appendChild(chatTitle);
-
-      if(!item.owned){
-        var qbtns = document.createElement('div');
-        qbtns.className = 'qbtns';
-        var qList = item.category==='araba' ? CAR_QUESTIONS : ARSA_QUESTIONS;
-        qList.forEach(function(q){
-          var qb = document.createElement('button');
-          qb.className = 'btn-ghost';
-          qb.textContent = q.text;
-          if(q.key==='fiyat' && item.priceAsked) qb.disabled = true;
-          qb.onclick = function(){ Game.askQuestion(item.id, q.key); };
-          qbtns.appendChild(qb);
-        });
-        chatbox.appendChild(qbtns);
-      }
-
-      item.messages.forEach(function(m){
-        var b = document.createElement('div');
-        b.className = 'bubble ' + (m.from==='me' ? 'me' : 'seller');
-        b.textContent = m.text;
-        chatbox.appendChild(b);
-      });
-      if(item.messages.length===0){
-        var hint = document.createElement('div');
-        hint.className = 'desc-note';
-        hint.textContent = 'Henüz mesaj yok — yukarıdan bir soru seç.';
-        chatbox.appendChild(hint);
-      }
-      body.appendChild(chatbox);
+    if(item.category!=='dukkan' && !item.owned){
+      var msgCard = document.createElement('div');
+      msgCard.className = 'card';
+      msgCard.style.marginBottom = '16px';
+      msgCard.innerHTML = '<div class="kicker">İletişim</div><div style="margin-top:4px;font-size:0.85rem;">' +
+        (item.messages.length>0 ? 'Bu ilanla ilgili mesajlaşman var.' : 'Satıcıya soru sormak veya fiyat pazarlığı yapmak için mesaj at.') + '</div>';
+      var msgBtn = document.createElement('button');
+      msgBtn.className = 'btn-navy btn-sm';
+      msgBtn.style.marginTop = '8px';
+      msgBtn.textContent = item.messages.length>0 ? 'Mesajlaşmayı Aç' : 'Satıcıya Mesaj At';
+      msgBtn.onclick = function(){
+        state.openMessageThreadItemId = item.id;
+        state.openDetailId = null;
+        state.tab = 'mesajlar';
+        Game.render();
+      };
+      msgCard.appendChild(msgBtn);
+      body.appendChild(msgCard);
     }
 
     overlay.appendChild(body);

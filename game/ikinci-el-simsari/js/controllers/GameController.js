@@ -7,11 +7,11 @@ import { ConfirmDialog } from '../services/ConfirmDialog.js';
 import {
   CAR_QUESTIONS, ARSA_QUESTIONS, USTALAR, MASRAF_OPTIONS,
   TENANT_NAMES, TENANT_BUSINESS_ARABA, TENANT_BUSINESS_ARSA,
-  BUYER_NAMES, BUYER_DISCOUNT_LINES, PRICE_SCALE, LOAN_TIERS,
+  BUYER_NAMES, BUYER_DISCOUNT_LINES, PRICE_SCALE,
   CONSTRUCTION_COST_PER_M2, CONSTRUCTION_DAYS_MIN, CONSTRUCTION_DAYS_MAX, CONSTRUCTION_VALUE_MULT,
   CAR_DAILY_HOLDING_COST, ARSA_DAILY_HOLDING_COST, STALE_LISTING_DAYS, STALE_DEPRECIATION_RATE,
   BOOST_DAYS, BOOST_ATTRACT_BONUS, KASKO_DAILY_RATE, KASKO_MIN_DAILY, KASKO_DEDUCTIBLE, KAZA_DAILY_CHANCE,
-  FAULT_POOL_CAR, REPUTATION_MAX_STARS
+  FAULT_POOL_CAR, REPUTATION_MAX_STARS, TRAMER_MISS_CHANCE, TRAMER_KAZA_TYPES
 } from '../data/constants.js';
 import { ACHIEVEMENTS } from './achievements.js';
 
@@ -40,15 +40,16 @@ export var Game = {
     priceMax: "",
     openDetailId: null,
     openShopId: null,
+    openMessageThreadItemId: null,
     controlPanelOpen: false
   },
   player: new Player(),
   render: function(){ /* main.js tarafından değiştirilir */ },
-  _loanRepaidCount: 0,
   _boughtDealCount: 0,
   _kaskoCount: 0,
   _boostCount: 0,
   _fullInspectCount: 0,
+  _tramerCaughtCount: 0,
 
   init: function(){
     ConfirmDialog.init();
@@ -110,34 +111,87 @@ export var Game = {
   // =====================================================================
   //  EYLEMLER
   // =====================================================================
-  doInspect: function(id, full){
-    var self = this, state = this.state, player = this.player;
+  // Ekspertiz: yerinde inceleme — motor/boya/diğer (hasar/heavy olmayan)
+  // arızaları açar, INSPECT_MISS_CHANCE ile bazen birini kaçırır.
+  doInspect: function(id){
+    var self = this, player = this.player;
     var item = this.findAny(id);
-    if(!item || item.inspected) return;
-    var desc = full ? TransactionManager.fullInspection(player, item) : TransactionManager.inspection(player, item);
+    if(!item || item.ekspertizDone) return;
+    var desc = TransactionManager.inspection(player, item);
     this.perform(desc, function(){
       player.spend(desc.cost);
+      item.ekspertizDone = true;
       item.inspected = true;
-      item.inspectionQuality = full ? 'full' : 'normal';
-      item.faults.forEach(function(f){ f.hidden = full ? false : (Math.random() < desc.missChance); });
-      var missedCount = item.faults.filter(function(f){return f.hidden;}).length;
-      self.addLog((full ? 'TRAMER tam rapor alındı' : 'Ekspertiz yaptırıldı') + ': ' + item.title + ' — ' + fmt(desc.cost), 'neg');
-      if(!full && missedCount>0) self.addLog('(Ekspertizci bir şeyi gözden kaçırmış olabilir — satın almadan emin olamazsın.)', '');
-      if(full) self._fullInspectCount += 1;
-      player.addXp('ekspertiz', full ? 35 : 25);
+      var lightFaults = item.faults.filter(function(f){ return !f.heavy; });
+      lightFaults.forEach(function(f){ f.hidden = Math.random() < desc.missChance; });
+      var missedCount = lightFaults.filter(function(f){return f.hidden;}).length;
+      self.addLog('Ekspertiz yaptırıldı: ' + item.title + ' — ' + fmt(desc.cost), 'neg');
+      if(missedCount>0) self.addLog('(Ekspertizci bir şeyi gözden kaçırmış olabilir — satın almadan emin olamazsın.)', '');
+      player.addXp('ekspertiz', 25);
       self.checkAchievements();
       self.render();
     });
+  },
+
+  // TRAMER: SBM üzerinden resmi kaza kaydı sorgusu — sadece araba, sadece
+  // ağır hasar (heavy) kayıtlarını açar, TRAMER_MISS_CHANCE ile bazı
+  // kazalar sigortaya bildirilmemiş olabileceğinden görünmeyebilir.
+  // Sonuç, SBM'den gelen bir SMS gibi Mesajlar'a düşer.
+  doTramerQuery: function(id){
+    var self = this, player = this.player;
+    var item = this.findAny(id);
+    if(!item || item.category!=='araba' || item.tramerDone) return;
+    var desc = TransactionManager.tramerQuery(player, item);
+    this.perform(desc, function(){
+      player.spend(desc.cost);
+      item.tramerDone = true;
+      item.inspected = true;
+      var heavyFaults = item.faults.filter(function(f){ return f.heavy; });
+      var found = [];
+      heavyFaults.forEach(function(f){
+        var missed = Math.random() < TRAMER_MISS_CHANCE;
+        f.hidden = missed;
+        if(!missed) found.push(f);
+      });
+
+      var plate = item.plate || self.randomPlateFallback();
+      var chassisSuffix = item.chassisSuffix || '0000';
+      item.messages.push({from:'me', text: plate + ' plaka / ***' + chassisSuffix + ' şasi no için TRAMER kaydı sorgula.'});
+
+      var reportText;
+      if(found.length===0){
+        reportText = 'Kayıtlarımıza göre bu araç kayıtlı bir kazaya karışmamıştır.';
+      } else {
+        var lines = found.map(function(f, i){
+          var kt = pick(TRAMER_KAZA_TYPES);
+          var cost = rnd(200, 900) * 5;
+          return 'KZ' + (i+1) + ': ' + self.randomPastDateStr() + ' ' + kt.code + '-' + kt.reason + ' ' + cost + 'TL';
+        });
+        reportText = 'Kayıtlarımıza göre ***' + chassisSuffix + ' Şasi no\'lu araç ' + found.length + ' adet kazaya karışmıştır.\n' + lines.join('\n');
+      }
+      item.messages.push({from:'sbm', text: reportText});
+
+      self.addLog('TRAMER kaydı sorgulandı: ' + item.title + ' — ' + fmt(desc.cost), 'neg');
+      self._fullInspectCount += 1;
+      if(found.length>0) self._tramerCaughtCount += 1;
+      player.addXp('ekspertiz', 20);
+      self.checkAchievements();
+      self.render();
+    });
+  },
+
+  randomPlateFallback: function(){ return '34 ABC ' + rnd(100,999); },
+  randomPastDateStr: function(){
+    var d = rnd(1,29), m = rnd(1,13), y = rnd(2011, 2025);
+    function pad(n){ return n<10 ? '0'+n : ''+n; }
+    return pad(d) + '/' + pad(m) + '/' + y;
   },
 
   doBuy: function(id){
     var self = this, state = this.state, player = this.player;
     var item = this.findListing(id);
     if(!item) return;
-    var priorQuality = item.inspectionQuality;
-    var hiddenLoss = priorQuality==='none'
-      ? item.faults.reduce(function(s,f){return s+f.loss;},0)
-      : item.faults.filter(function(f){return f.hidden;}).reduce(function(s,f){return s+f.loss;},0);
+    var hiddenLoss = item.faults.filter(function(f){return f.hidden;}).reduce(function(s,f){return s+f.loss;},0);
     var desc = TransactionManager.purchase(player, item);
     this.perform(desc, function(){
       var idx = state.listings.findIndex(function(l){return l.id===id;});
@@ -391,6 +445,9 @@ export var Game = {
     player.addXp('pazarlik', 6);
     player.totalSales += 1;
     player.totalProfit += profit;
+    if(item.category==='araba') player.carsSold += 1;
+    else if(item.category==='arsa') player.arsaSold += 1;
+    else if(item.category==='dukkan') player.dukkanSold += 1;
     this.checkAchievements();
   },
 
@@ -590,38 +647,6 @@ export var Game = {
     this.render();
   },
 
-  // ---- Banka Kredisi ----
-  // Büyük alımlar (özellikle arsa/dükkan) için ek nakit sağlar; her gün
-  // faiz işler ve bakiyeden otomatik asgari ödeme düşülür.
-  takeLoan: function(tierIdx){
-    var player = this.player;
-    if(player.loan){ toast('Zaten açık bir kredin var, önce onu kapat.'); return; }
-    var tier = LOAN_TIERS[tierIdx];
-    if(!tier) return;
-    player.loan = {
-      amount: tier.amount, remaining: tier.amount,
-      dailyRate: tier.dailyRate, dailyPayment: Math.round(tier.amount*tier.dailyPaymentRate)
-    };
-    player.earn(tier.amount);
-    this.addLog('Bankadan kredi çekildi: ' + fmt(tier.amount) + ' (günlük faiz %' + (tier.dailyRate*100).toFixed(1) + ')', 'pos');
-    toast('Kredi hesabına yatırıldı: ' + fmt(tier.amount));
-    this.render();
-  },
-
-  repayLoan: function(){
-    var player = this.player;
-    if(!player.loan) return;
-    var remaining = player.loan.remaining;
-    if(!player.canAfford(remaining)){ toast('Krediyi kapatmak için bakiyen yetersiz.'); return; }
-    player.spend(remaining);
-    this.addLog('Kredi tamamen kapatıldı: ' + fmt(remaining), 'neg');
-    toast('Kredi kapatıldı.');
-    player.loan = null;
-    this._loanRepaidCount += 1;
-    this.checkAchievements();
-    this.render();
-  },
-
   doNextDay: function(){
     var self = this, state = this.state, player = this.player;
     var desc = TransactionManager.nextDay(player);
@@ -677,7 +702,7 @@ export var Game = {
         }
         if(Math.random() < KAZA_DAILY_CHANCE){
           var faultDef = pick(FAULT_POOL_CAR);
-          var newFault = { tag:faultDef.tag, label:faultDef.label, loss:rnd(faultDef.loss[0],faultDef.loss[1]), repairCost:rnd(faultDef.repair[0],faultDef.repair[1]), fixed:false, heavy:false };
+          var newFault = { tag:faultDef.tag, label:faultDef.label, loss:rnd(faultDef.loss[0],faultDef.loss[1]), repairCost:rnd(faultDef.repair[0],faultDef.repair[1]), fixed:false, heavy:false, hidden:false };
           if(car.insured){
             player.spend(KASKO_DEDUCTIBLE);
             newFault.fixed = true;
@@ -691,21 +716,6 @@ export var Game = {
           }
         }
       });
-
-      if(player.loan){
-        var loan = player.loan;
-        loan.remaining += Math.round(loan.remaining*loan.dailyRate);
-        var payment = Math.min(loan.dailyPayment, loan.remaining, Math.max(0,player.balance));
-        player.spend(payment);
-        loan.remaining -= payment;
-        if(loan.remaining <= 1){
-          self.addLog('Banka kredisi tamamen ödendi.', 'pos');
-          player.loan = null;
-          self._loanRepaidCount += 1;
-        } else {
-          self.addLog('Kredi ödemesi yapıldı: ' + fmt(payment) + ' (kalan borç: ' + fmt(loan.remaining) + ')', 'neg');
-        }
-      }
 
       var iLvl = player.skillLevel('isletme');
       var rentDiscount = clamp(iLvl*0.02, 0, 0.25);

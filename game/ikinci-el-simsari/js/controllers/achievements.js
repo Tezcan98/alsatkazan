@@ -16,8 +16,6 @@ export var ACHIEVEMENTS = [
     test: function(g){ return g.player.totalSales >= 20; } },
   { id:'emlak-krali', title:'Emlak Kralı', desc:'Bir arsaya ev inşa ettir.',
     test: function(g){ return g.state.inventory.some(function(i){ return i.category==='arsa' && i.hasHouse; }); } },
-  { id:'borc-kapatildi', title:'Borç Yönetimi', desc:'Bir banka kredisini tamamen kapat.',
-    test: function(g){ return g._loanRepaidCount > 0; } },
   { id:'usta-tamirci', title:'Usta Tamirci', desc:'Tamir Ustalığında 10. seviyeye ulaş.',
     test: function(g){ return g.player.skillLevel('tamir') >= 10; } },
   { id:'sabirli', title:'Taş Gibi Sabır', desc:'Sabır yeteneğinde 5. seviyeye ulaş.',
@@ -32,6 +30,14 @@ export var ACHIEVEMENTS = [
     test: function(g){ return g._kaskoCount > 0; } },
   { id:'reklamci', title:'Reklamcı', desc:'Bir ilanını öne çıkar (doping).',
     test: function(g){ return g._boostCount > 0; } },
-  { id:'guvenilir-alici', title:'Güvenilir Alıcı', desc:'Bir TRAMER Tam Rapor satın al.',
-    test: function(g){ return g._fullInspectCount > 0; } }
+  { id:'guvenilir-alici', title:'Güvenilir Alıcı', desc:'Bir TRAMER kaydı sorgula.',
+    test: function(g){ return g._fullInspectCount > 0; } },
+  { id:'araba-satici', title:'Araba Simsarı', desc:'Toplam 10 araba sat.',
+    test: function(g){ return g.player.carsSold >= 10; } },
+  { id:'arsa-satici', title:'Arsa Simsarı', desc:'Toplam 10 arsa sat.',
+    test: function(g){ return g.player.arsaSold >= 10; } },
+  { id:'dukkan-satici', title:'Dükkan Simsarı', desc:'Toplam 5 dükkan sat.',
+    test: function(g){ return g.player.dukkanSold >= 5; } },
+  { id:'kazik-avcisi', title:'Kazık Avcısı', desc:'TRAMER sorgusunda gizli bir kaza kaydı yakala.',
+    test: function(g){ return g._tramerCaughtCount > 0; } }
 ];
