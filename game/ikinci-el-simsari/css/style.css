@@ -88,6 +88,7 @@ main.fadein{ animation: fadeInMain 0.22s ease-out; }
 .filterbar{ display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
 .filterbar button{ border-radius:2px; padding:7px 14px; font-size:0.78rem; border:1px solid #bbb; }
 .filterbar button.active{ background:var(--orange); color:#3a2c00; border-color:var(--orange-dark); }
+.btn-ghost.active{ background:var(--orange); color:#3a2c00; border-color:var(--orange-dark); }
 
 h2.section{
   font-size:0.88rem; margin:16px 0 8px; padding:5px 8px;
@@ -325,6 +326,10 @@ nav.bottombar.nav-busy:before{
 .modal-box .mmsg{ font-size:0.85rem; color:var(--ink); margin:10px 0 12px; line-height:1.45; }
 .modal-actions{ display:flex; gap:8px; margin-top:14px; }
 .modal-actions button{ flex:1 1 0; }
+.modal-box.bilanco{ max-width:420px; max-height:82vh; overflow-y:auto; }
+.modal-box.bilanco .kicker{ font-size:0.66rem; color:var(--ink-faint); letter-spacing:0.03em; margin-bottom:2px; }
+.bilanco-neg{ color:var(--red) !important; }
+.bilanco-pos{ color:var(--green) !important; }
 
 /* ---- işlem sürüyor barı ---- */
 .busybar{

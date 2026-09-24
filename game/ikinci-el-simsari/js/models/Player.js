@@ -17,6 +17,10 @@ export function Player(){
   this.achievements = [];
   // Harita / seyahat sistemi: oyuncunun şu anki şehri (bkz. Game.doTravel)
   this.currentCity = 'İstanbul';
+  // Ev şehri: oyun başında bir kez sabitlenir, seyahatle DEĞİŞMEZ — günlük
+  // kira burası için ödenir ve pansiyon masrafı bu şehirden (ve dükkan
+  // şehirlerinden) uzaktayken devreye girer (bkz. GameController.doNextDay)
+  this.homeCity = 'İstanbul';
   // Seyahat aracı: garajdaki bir arabanın id'si — seçiliyse seyahatlerde
   // "o araçla gidiliyor" sayılır ve km'si artar (bkz. GarageView, Game.doTravel)
   this.travelCarId = null;

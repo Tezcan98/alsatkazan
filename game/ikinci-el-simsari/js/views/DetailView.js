@@ -176,7 +176,8 @@ export var DetailView = {
         goCityBtn.disabled = busy;
         goCityBtn.onclick = function(){
           state.openDetailId = null;
-          state.mapSelectedCity = item.location;
+          state.mapSelectedCity = null;
+          state.travelTargetCity = item.location;
           state.tab = 'harita';
           Game.render();
         };

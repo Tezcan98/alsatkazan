@@ -336,17 +336,22 @@ export const REPUTATION_MAX_STARS = 5;
 // ---- Harita / Seyahat ----
 // Şehirler arası mesafe, CITY_COORDS üzerindeki basit Öklid uzaklığıdır
 // (bu koordinatlar doğrudan enlem/boylamdan türetildiği için mesafe birimi
-// kabaca gerçek coğrafyayla orantılıdır). Maliyet artık otobüs bileti/yakıt
-// seviyesinde ucuz — sık ve sıradan bir eylem olsun diye kasıtlı olarak
-// düşük tutuldu (yakın şehir birkaç yüz TL, en uzak şehir bile ~2.000 TL
-// civarı).
-export const TRAVEL_COST_PER_UNIT = 12;
-export const TRAVEL_MIN_COST = 250;
-export const TRAVEL_HOURS_PER_UNIT = 0.07;
+// kabaca gerçek coğrafyayla orantılıdır). Artık iki ayrı seyahat modu var:
+// Araba (kendi seyahat aracınla — hızlı ama masraflı, km ekler) ve
+// Otobüs (herkese açık, ucuz ama daha uzun sürer, hiçbir aracın km'sini
+// etkilemez). Maliyetler hâlâ kasıtlı olarak düşük tutuldu (yakın şehir
+// birkaç yüz TL, en uzak şehir bile birkaç bin TL civarı).
+export const TRAVEL_CAR_COST_PER_UNIT = 14;
+export const TRAVEL_CAR_MIN_COST = 300;
+export const TRAVEL_CAR_HOURS_PER_UNIT = 0.055;
+export const TRAVEL_BUS_COST_PER_UNIT = 7;
+export const TRAVEL_BUS_MIN_COST = 150;
+export const TRAVEL_BUS_HOURS_PER_UNIT = 0.13;
 // Seyahat aracı olarak seçilmiş bir arabanın km'sinin, kat edilen şematik
 // mesafe başına ne kadar artacağı (bkz. Game.doTravel). ~6.5, koordinat
 // sistemimizdeki 1 birimlik mesafenin gerçek dünyada kabaca kaç km'ye denk
 // geldiğine göre seçildi (örn. İstanbul-Ankara ~70 birim ≈ 455 km).
+// Sadece Araba modunda uygulanır — Otobüs modu hiçbir aracın km'sini artırmaz.
 export const TRAVEL_KM_PER_UNIT = 6.5;
 
 // ---- Yedek Parçacı fiyat farkı ----
@@ -354,3 +359,29 @@ export const TRAVEL_KM_PER_UNIT = 6.5;
 // aynı parça farklı şehirlerde farklı fiyata satılır.
 export const PARTS_CITY_VARIANCE_MIN = 0.82;
 export const PARTS_CITY_VARIANCE_MAX = 1.28;
+
+// ---- Yedek Parça Kargo ----
+// Bulunduğun şehir dışındaki bir parçacıdan parça alınca (İlanlar →
+// Yedek Parça, artık tüm şehirler birden gösteriliyor) doğrudan teslim
+// edilmez — kargoyla gönderilir. Kargo ücreti mesafeye göre hesaplanır
+// ama otobüs biletinden bile ucuzdur (kargonun bütün amacı, o şehre
+// gitme masrafından/süresinden tasarruf etmektir); teslimat birkaç
+// oyun-içi gün sürer.
+export const CARGO_COST_PER_UNIT = 4;
+export const CARGO_MIN_COST = 80;
+export const CARGO_DELIVERY_DAYS_MIN = 1;
+export const CARGO_DELIVERY_DAYS_MAX = 3;
+
+// ---- Günlük Yaşam Maliyeti / Ev Kirası / Pansiyon ----
+// Sahip olma masraflarından (CAR_DAILY_HOLDING_COST vb.) bağımsız, kişisel
+// giderler: oyuncunun kendisi de her gün yemek/fatura gibi bir yaşam
+// maliyetine katlanır, ayrıca bir "ev şehri" (Player.homeCity, oyun
+// başında İstanbul olarak sabitlenir, seyahatle değişmez) için sabit bir
+// kira öder — bu, nerede olursa olsun her gün ödenir. Oyuncu ev şehrinin
+// VE sahip olduğu hiçbir dükkanın şehrinde değilse (yani seyahatteyse ve
+// kalacak bir yeri yoksa), buna ek olarak ucuz bir pansiyon/otel masrafı
+// eklenir — uzun otobüs yolculukları bu yüzden ekstra pansiyon günü
+// biriktirebilir.
+export const DAILY_LIVING_COST = 300;
+export const DAILY_RENT = 450;
+export const PANSIYON_DAILY_COST = 600;

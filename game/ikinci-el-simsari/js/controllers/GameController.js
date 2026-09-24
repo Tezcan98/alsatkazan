@@ -4,6 +4,7 @@ import { Market } from '../services/Market.js';
 import { TransactionManager } from '../services/TransactionManager.js';
 import { OperationManager } from '../services/OperationManager.js';
 import { ConfirmDialog } from '../services/ConfirmDialog.js';
+import { BilancoDialog } from '../services/BilancoDialog.js';
 import {
   CAR_QUESTIONS, ARSA_QUESTIONS, USTALAR, MASRAF_OPTIONS,
   TENANT_NAMES, TENANT_BUSINESS_ARABA, TENANT_BUSINESS_ARSA,
@@ -12,7 +13,9 @@ import {
   CAR_DAILY_HOLDING_COST, ARSA_DAILY_HOLDING_COST, STALE_LISTING_DAYS, STALE_DEPRECIATION_RATE,
   BOOST_DAYS, BOOST_ATTRACT_BONUS, KASKO_DAILY_RATE, KASKO_MIN_DAILY, KASKO_DEDUCTIBLE, KAZA_DAILY_CHANCE,
   FAULT_POOL_CAR, REPUTATION_MAX_STARS, TRAMER_MISS_CHANCE, TRAMER_KAZA_TYPES,
-  CITY_COORDS, TRAVEL_KM_PER_UNIT
+  CITY_COORDS, TRAVEL_KM_PER_UNIT,
+  CARGO_COST_PER_UNIT, CARGO_MIN_COST, CARGO_DELIVERY_DAYS_MIN, CARGO_DELIVERY_DAYS_MAX,
+  DAILY_LIVING_COST, DAILY_RENT, PANSIYON_DAILY_COST
 } from '../data/constants.js';
 import { ACHIEVEMENTS } from './achievements.js';
 import { generateSellerReply } from '../services/SellerReplyService.js';
@@ -32,6 +35,9 @@ export var Game = {
     shops: [],
     parts: {},
     partsMarket: [],
+    // Başka şehirden kargoyla sipariş edilmiş ama henüz ulaşmamış parçalar
+    // (bkz. Game.doBuyPart / doNextDay) — {brand, tag, name, city, arrivalDay}
+    pendingParts: [],
     log: [],
     tab: "listings",
     listingFilter: "hepsi",
@@ -48,7 +54,12 @@ export var Game = {
     controlPanelOpen: false,
     // Harita: seçili şehrin ilanlarını haritanın altında listelemek için
     // (bkz. MapView) — bir şehirdeki ilan işaretine tıklanınca dolar.
-    mapSelectedCity: null
+    mapSelectedCity: null,
+    // Harita: seyahat için seçilmiş hedef şehir — dolduğunda MapView Araba/
+    // Otobüs mod seçim panelini gösterir (bkz. MapView.renderTravelPanel).
+    travelTargetCity: null,
+    // İlanlar sekmesindeki Liste/Harita görünüm anahtarı (bkz. ListingsView).
+    listingViewMode: 'list'
   },
   player: new Player(),
   render: function(){ /* main.js tarafından değiştirilir */ },
@@ -60,8 +71,23 @@ export var Game = {
   _msgSeq: 0,
   stampMsg: function(m){ m.ts = ++this._msgSeq; return m; },
 
+  // Gün-sonu bilançosu için tek-günlük gelir/gider defteri — her
+  // doNextDay() çağrısının başında sıfırlanır, o gün içindeki OTOMATİK
+  // (manuel olmayan) gün-geçişi kalemleriyle doldurulur, gün sonunda
+  // BilancoDialog'a geçirilir (bkz. doNextDay, ledgerExpense/ledgerIncome).
+  _dayLedger: null,
+  ledgerExpense: function(label, amount){
+    if(!amount || !this._dayLedger) return;
+    this._dayLedger.expense[label] = (this._dayLedger.expense[label]||0) + amount;
+  },
+  ledgerIncome: function(label, amount){
+    if(!amount || !this._dayLedger) return;
+    this._dayLedger.income[label] = (this._dayLedger.income[label]||0) + amount;
+  },
+
   init: function(){
     ConfirmDialog.init();
+    BilancoDialog.init();
     OperationManager.init();
     this.state.listings = Market.refreshListings();
     this.state.partsMarket = Market.refreshPartsMarket();
@@ -202,27 +228,44 @@ export var Game = {
     if(!a || !b) return 0;
     return Math.sqrt(Math.pow(a.x-b.x,2) + Math.pow(a.y-b.y,2));
   },
-  doTravel: function(city){
+  // mode: 'car' (seyahat aracınla — hızlı, masraflı, km ekler) ya da
+  // 'bus' (otobüs — ucuz, yavaş, km eklemez). 'car' için önce travelCarId
+  // seçili olmalı (bkz. MapView.renderTravelPanel'de disabled kontrolü).
+  doTravel: function(city, mode){
     var self = this, player = this.player;
     if(!CITY_COORDS[city] || city===player.currentCity) return;
+    if(mode==='car' && !player.travelCarId){ toast('Önce Garajım\'dan bir seyahat aracı seç.'); return; }
     var dist = this.cityDistance(player.currentCity, city);
-    var desc = TransactionManager.travel(player, player.currentCity, city, dist);
+    var desc = TransactionManager.travel(player, player.currentCity, city, dist, mode);
     this.perform(desc, function(){
       player.spend(desc.cost);
       var fromCity = player.currentCity;
       player.currentCity = city;
-      self.addLog('Seyahat edildi: ' + fromCity + ' → ' + city + ' — ' + fmt(desc.cost), 'neg');
+      self.state.travelTargetCity = null;
+      self.addLog('Seyahat edildi (' + (desc.mode==='car'?'araba':'otobüs') + '): ' + fromCity + ' → ' + city + ' — ' + fmt(desc.cost), 'neg');
       toast('Artık ' + city + ' şehrindesin.');
-      // Seyahat aracı seçiliyse o aracın km'si kat edilen mesafeyle artar —
-      // seçili değilse (toplu taşıma) hiçbir aracın km'si etkilenmez.
-      var travelCar = player.travelCarId ? self.findInv(player.travelCarId) : null;
-      if(travelCar && travelCar.category==='araba'){
-        var addedKm = Math.round(dist * TRAVEL_KM_PER_UNIT);
-        travelCar.km += addedKm;
-        self.addLog(travelCar.title + ' ile gidildi, km ' + addedKm.toLocaleString('tr-TR') + ' arttı (toplam ' + travelCar.km.toLocaleString('tr-TR') + ' km).', '');
+      // Sadece Araba modunda: seyahat aracının km'si kat edilen mesafeyle
+      // artar. Otobüs modunda hiçbir aracın km'si etkilenmez.
+      if(desc.mode==='car'){
+        var travelCar = self.findInv(player.travelCarId);
+        if(travelCar && travelCar.category==='araba'){
+          var addedKm = Math.round(dist * TRAVEL_KM_PER_UNIT);
+          travelCar.km += addedKm;
+          self.addLog(travelCar.title + ' ile gidildi, km ' + addedKm.toLocaleString('tr-TR') + ' arttı (toplam ' + travelCar.km.toLocaleString('tr-TR') + ' km).', '');
+        }
       }
       self.render();
     });
+  },
+
+  // Bir şehirdeki parçacıdan kargoyla sipariş verilince ücret/süre tahmini
+  // (bkz. doBuyPart, PartsCard). Mesafeye göre hesaplanır ama otobüs
+  // biletinden bile ucuz tutulur — kargonun amacı oraya gitmekten tasarruf.
+  cargoEstimate: function(toCity){
+    var dist = this.cityDistance(this.player.currentCity, toCity);
+    var shipping = Math.max(CARGO_MIN_COST, Math.round(dist * CARGO_COST_PER_UNIT));
+    var days = clamp(Math.round(dist/80) + 1, CARGO_DELIVERY_DAYS_MIN, CARGO_DELIVERY_DAYS_MAX);
+    return { shipping: shipping, days: days };
   },
 
   // ---- Seyahat aracı seç / seçimi kaldır (bkz. GarageView) ----
@@ -619,20 +662,39 @@ export var Game = {
     player.addXp('isletme', 8);
     player.totalSales += 1;
     player.totalProfit += profit;
+    this.ledgerIncome('Vitrin satışları (pasif)', salePrice);
   },
 
-  doBuyPart: function(brand, tag){
+  // city verilmezse varsayılan olarak bulunduğun şehir kabul edilir
+  // (UstalarView her zaman kendi şehrini gösterdiği için city geçmez).
+  // Bulunduğun şehirden alım anında teslim edilir; başka şehirden alım
+  // kargoyla gelir — ücrete kargo eklenir ve birkaç gün gün-içi gecikir
+  // (bkz. state.pendingParts / doNextDay).
+  doBuyPart: function(brand, tag, city){
     var self = this, state = this.state, player = this.player;
-    var m = state.partsMarket.find(function(p){return p.brand===brand && p.tag===tag && p.city===player.currentCity;});
+    city = city || player.currentCity;
+    var m = state.partsMarket.find(function(p){return p.brand===brand && p.tag===tag && p.city===city;});
     if(!m) return;
-    var desc = TransactionManager.buyPart(player, brand, m);
-    this.perform(desc, function(){
-      player.spend(desc.cost);
-      var key = brand + '|' + tag;
-      state.parts[key] = (state.parts[key]||0) + 1;
-      self.addLog('Yedek parça alındı: ' + brand + ' ' + m.name + ' — ' + fmt(desc.cost), 'neg');
-      self.render();
-    });
+    if(city === player.currentCity){
+      var desc = TransactionManager.buyPart(player, brand, m);
+      this.perform(desc, function(){
+        player.spend(desc.cost);
+        var key = brand + '|' + tag;
+        state.parts[key] = (state.parts[key]||0) + 1;
+        self.addLog('Yedek parça alındı: ' + brand + ' ' + m.name + ' — ' + fmt(desc.cost), 'neg');
+        self.render();
+      });
+    } else {
+      var est = this.cargoEstimate(city);
+      var cdesc = TransactionManager.buyPartCargo(player, brand, m, est.shipping, est.days);
+      this.perform(cdesc, function(){
+        player.spend(cdesc.cost);
+        state.pendingParts.push({ brand: brand, tag: tag, name: m.name, city: city, arrivalDay: state.day + est.days });
+        self.addLog('Yedek parça kargoyla sipariş edildi: ' + brand + ' ' + m.name + ' (' + city + ') — ' + fmt(cdesc.cost) + ', ' + est.days + ' gün içinde gelir', 'neg');
+        toast('Sipariş verildi — ' + est.days + ' gün içinde ulaşır.');
+        self.render();
+      });
+    }
   },
 
   doShopUpgrade: function(shopId, upgradeId){
@@ -726,12 +788,43 @@ export var Game = {
     var self = this, state = this.state, player = this.player;
     var desc = TransactionManager.nextDay(player);
     this.perform(desc, function(){
+      var startBalance = player.balance;
+      self._dayLedger = { expense: {}, income: {} };
       state.day += 1;
       // Favorilenen ilanlar günlük yenilemede kaybolmasın diye korunur,
       // yeni ilan havuzunun başına eklenir.
       var keptFavorites = state.listings.filter(function(l){ return l.favorite; });
       state.listings = keptFavorites.concat(Market.refreshListings());
       state.partsMarket = Market.refreshPartsMarket();
+
+      // ---- Kargoyla sipariş edilmiş parçalar — süresi dolanlar ulaşır ----
+      var arrived = state.pendingParts.filter(function(p){ return p.arrivalDay <= state.day; });
+      if(arrived.length>0){
+        arrived.forEach(function(p){
+          var key = p.brand + '|' + p.tag;
+          state.parts[key] = (state.parts[key]||0) + 1;
+          self.addLog('Kargo ulaştı: ' + p.brand + ' ' + p.name + ' (' + p.city + '\'den)', 'pos');
+        });
+        toast(arrived.length + ' kargo parçası ulaştı.');
+        state.pendingParts = state.pendingParts.filter(function(p){ return p.arrivalDay > state.day; });
+      }
+
+      // ---- Günlük kişisel giderler: ev kirası + yaşam maliyeti (her zaman) ----
+      player.spend(DAILY_RENT);
+      self.ledgerExpense('Ev Kirası', DAILY_RENT);
+      self.addLog('Ev kirası ödendi: ' + fmt(DAILY_RENT), 'neg');
+
+      player.spend(DAILY_LIVING_COST);
+      self.ledgerExpense('Yaşam Maliyeti', DAILY_LIVING_COST);
+      self.addLog('Günlük yaşam maliyeti: ' + fmt(DAILY_LIVING_COST), 'neg');
+
+      // ---- Pansiyon: ne ev şehrinde ne de bir dükkanının şehrinde isen ----
+      var inShopCity = state.shops.some(function(s){ return s.location===player.currentCity; });
+      if(player.currentCity !== player.homeCity && !inShopCity){
+        player.spend(PANSIYON_DAILY_COST);
+        self.ledgerExpense('Pansiyon (şehir dışı)', PANSIYON_DAILY_COST);
+        self.addLog('Şehir dışındasın (' + player.currentCity + ') — pansiyon masrafı: ' + fmt(PANSIYON_DAILY_COST), 'neg');
+      }
 
       // ---- Arsalarda süren inşaatlar ----
       state.inventory.filter(function(i){ return i.category==='arsa' && i.underConstruction; }).forEach(function(land){
@@ -765,6 +858,7 @@ export var Game = {
       });
       if(totalHolding > 0){
         player.spend(totalHolding);
+        self.ledgerExpense('Sahip olma masrafları (garaj)', totalHolding);
         self.addLog('Sigorta / vergi masrafları: ' + fmt(totalHolding) + ' (' + state.inventory.length + ' ürün için)', 'neg');
       }
 
@@ -773,6 +867,7 @@ export var Game = {
         if(car.insured){
           var premium = Math.max(KASKO_MIN_DAILY, Math.round(car.currentValue()*KASKO_DAILY_RATE));
           player.spend(premium);
+          self.ledgerExpense('Kasko primleri', premium);
           self.addLog(car.title + ' kasko primi: ' + fmt(premium), 'neg');
         }
         if(Math.random() < KAZA_DAILY_CHANCE){
@@ -780,6 +875,7 @@ export var Game = {
           var newFault = { tag:faultDef.tag, label:faultDef.label, loss:rnd(faultDef.loss[0],faultDef.loss[1]), repairCost:rnd(faultDef.repair[0],faultDef.repair[1]), fixed:false, heavy:false, hidden:false };
           if(car.insured){
             player.spend(KASKO_DEDUCTIBLE);
+            self.ledgerExpense('Kaza masrafları (kasko muafiyeti)', KASKO_DEDUCTIBLE);
             newFault.fixed = true;
             car.faults.push(newFault);
             self.addLog('Kaza oldu: ' + car.title + ' — "' + newFault.label + '" ama kasko karşıladı (muafiyet ' + fmt(KASKO_DEDUCTIBLE) + ')', 'neg');
@@ -798,6 +894,7 @@ export var Game = {
       state.shops.forEach(function(shop){
         var rentDue = Math.round(shop.rent * shop.rentMult * (1-rentDiscount));
         player.spend(rentDue);
+        self.ledgerExpense('Dükkan kiraları', rentDue);
         self.addLog(shop.title + ' kirası ödendi: ' + fmt(rentDue), 'neg');
         player.addXp('isletme', 4);
 
@@ -812,6 +909,7 @@ export var Game = {
           var paysChance = clamp(t.satisfaction/100, 0.5, 0.98);
           if(Math.random() < paysChance){
             player.earn(t.rent);
+            self.ledgerIncome('Kiracı kira geliri', t.rent);
             self.addLog(t.name + ' kirasını ödedi: ' + fmt(t.rent), 'pos');
           } else {
             self.addLog(t.name + ' bu ay kira ödemedi.', 'neg');
@@ -850,6 +948,7 @@ export var Game = {
             var salePrice = Math.round(item.listedPrice * (0.98 + Math.random()*0.05));
             item.forSale = false;
             self.completeInventorySale(item, salePrice, buyerName + ' hemen aldı');
+            self.ledgerIncome('Otomatik satışlar (garaj)', salePrice);
             toast(buyerName + ' ' + item.title + ' için geldi ve aldı!');
           } else {
             // İndirim istiyor — mesaj olarak düşer, kabul/reddet gerekir
@@ -866,7 +965,23 @@ export var Game = {
       if(player.balance < 0) self.addLog('Kasan eksiye düştü, dikkat!', 'neg');
       self.addLog('— Gün ' + state.day + ' başladı, yeni ilanlar geldi —');
       self.checkAchievements();
+
+      // ---- Gün-sonu bilançosu: o gün biriken otomatik gelir/giderler ----
+      var ledger = self._dayLedger;
+      self._dayLedger = null;
+      var expenseRows = Object.keys(ledger.expense).map(function(k){ return {label:k, amount: ledger.expense[k]}; });
+      var incomeRows = Object.keys(ledger.income).map(function(k){ return {label:k, amount: ledger.income[k]}; });
+      var net = player.balance - startBalance;
+
       self.render();
+      BilancoDialog.show({
+        day: state.day,
+        startBalance: startBalance,
+        endBalance: player.balance,
+        net: net,
+        expense: expenseRows,
+        income: incomeRows
+      });
     });
   }
 };

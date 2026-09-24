@@ -2,6 +2,7 @@ import { fmt } from '../utils.js';
 import { Game } from '../controllers/GameController.js';
 import { OperationManager } from '../services/OperationManager.js';
 import { buildPartRow } from './PartsCard.js';
+import { renderMap, groupByCity } from './MapRenderer.js';
 
 // =====================================================================
 //  İLANLAR (Görünüm katmanı)
@@ -95,7 +96,7 @@ export var ListingsView = {
     filterbar.className = 'filterbar';
     var myListingsCount = state.inventory.filter(function(i){return i.forSale;}).length;
     var favCount = state.listings.filter(function(l){return l.favorite;}).length;
-    var partsCount = state.partsMarket.filter(function(p){return p.city===Game.player.currentCity;}).length;
+    var partsCount = state.partsMarket.length;
     [
       ['hepsi','Hepsi'], ['araba','Araba'], ['arsa','Arsa'], ['dukkan','Dükkan'],
       ['parca','Yedek Parça (' + partsCount + ')'],
@@ -116,29 +117,55 @@ export var ListingsView = {
     if(isParts){
       var pH2 = document.createElement('h2');
       pH2.className = 'section';
-      var cityParts = state.partsMarket.filter(function(p){return p.city===Game.player.currentCity;});
-      pH2.innerHTML = 'Yedek Parça <span class="count">(' + cityParts.length + ')</span>';
+      var allParts = state.partsMarket;
+      pH2.innerHTML = 'Yedek Parça — Tüm Türkiye <span class="count">(' + allParts.length + ')</span>';
       container.appendChild(pH2);
       var pNote = document.createElement('div');
       pNote.className = 'desc-note';
       pNote.style.marginBottom = '10px';
-      pNote.textContent = 'Bu parçacı: ' + Game.player.currentCity + ' — doğrudan satın alınır, ekspertiz gerekmez. Fiyatlar şehirden şehre ve güne göre değişir.';
+      pNote.textContent = 'Bulunduğun şehir (' + Game.player.currentCity + ') dışındaki parçacılardan alım kargoyla gelir (ekstra ücret + birkaç gün gecikme). Fiyatlar şehirden şehre ve güne göre değişir.';
       container.appendChild(pNote);
-      if(cityParts.length===0){
-        var pe = document.createElement('div'); pe.className='empty'; pe.textContent='Bugün bu şehirdeki parçacıda stokta ürün yok.';
+      if(allParts.length===0){
+        var pe = document.createElement('div'); pe.className='empty'; pe.textContent='Bugün hiçbir şehirdeki parçacıda stokta ürün yok.';
         container.appendChild(pe);
       } else {
-        cityParts.forEach(function(entry){ container.appendChild(buildPartRow(entry)); });
+        // partsMarket şehir bazında ardışık üretildiği için (bkz. Market.
+        // refreshPartsMarket) burada tek geçişte, şehir değiştikçe küçük bir
+        // grup başlığı ekleyerek gösteriyoruz — ayrı bir gruplama adımına
+        // gerek kalmıyor.
+        var lastCity = null;
+        allParts.forEach(function(entry){
+          if(entry.city !== lastCity){
+            lastCity = entry.city;
+            var cityHead = document.createElement('div');
+            cityHead.className = 'kicker';
+            cityHead.style.margin = '14px 0 4px';
+            cityHead.textContent = entry.city + (entry.city===Game.player.currentCity ? ' (buradasın)' : '') + ' Parçacısı';
+            container.appendChild(cityHead);
+          }
+          container.appendChild(buildPartRow(entry));
+        });
       }
       return;
     }
 
-    // ---- sıralama + fiyat aralığı (yalnızca pazar ilanlarında) ----
+    // ---- sıralama + fiyat aralığı + Liste/Harita geçişi (yalnızca pazar ilanlarında) ----
     if(!isMine){
       var toolbar = document.createElement('div');
       toolbar.className = 'card';
       toolbar.style.marginBottom = '12px';
       toolbar.style.display = 'flex'; toolbar.style.gap = '8px'; toolbar.style.flexWrap = 'wrap'; toolbar.style.alignItems = 'center';
+
+      var viewLbl = document.createElement('span');
+      viewLbl.className = 'kicker'; viewLbl.textContent = 'Görünüm:';
+      toolbar.appendChild(viewLbl);
+      [['list','Liste'],['map','Harita']].forEach(function(v){
+        var vb = document.createElement('button');
+        vb.className = 'btn-ghost btn-sm' + (state.listingViewMode===v[0] ? ' active' : '');
+        vb.textContent = v[1];
+        vb.onclick = function(){ state.listingViewMode = v[0]; Game.render(); };
+        toolbar.appendChild(vb);
+      });
 
       var sortLbl = document.createElement('span');
       sortLbl.className = 'kicker'; sortLbl.textContent = 'Sırala:';
@@ -188,6 +215,50 @@ export var ListingsView = {
       if(!isNaN(max)) filtered = filtered.filter(function(l){return l.askingPrice<=max;});
       if(state.listingSort==='fiyat-artan') filtered = filtered.slice().sort(function(a,b){return a.askingPrice-b.askingPrice;});
       else if(state.listingSort==='fiyat-azalan') filtered = filtered.slice().sort(function(a,b){return b.askingPrice-a.askingPrice;});
+    }
+
+    // ---- Harita görünümü: aktif filtrelerle eşleşen ilanları haritada göster ----
+    if(!isMine && state.listingViewMode==='map'){
+      h2.innerHTML = 'İlanlar Haritası <span class="count">(' + filtered.length + ')</span>';
+      container.appendChild(h2);
+      var mCard = document.createElement('div');
+      mCard.className = 'card';
+      mCard.style.padding = '10px';
+      var byCity = groupByCity(filtered);
+      renderMap(mCard, {
+        currentCity: Game.player.currentCity,
+        listings: filtered,
+        onBadgeClick: function(city, cityListings){
+          if(cityListings.length===1){
+            state.openDetailId = cityListings[0].id;
+            state.mapSelectedCity = null;
+          } else {
+            state.mapSelectedCity = (state.mapSelectedCity===city) ? null : city;
+          }
+          Game.render();
+        }
+      });
+      container.appendChild(mCard);
+      if(state.mapSelectedCity && byCity[state.mapSelectedCity]){
+        var selCard = document.createElement('div');
+        selCard.className = 'card';
+        selCard.style.marginTop = '10px';
+        var selHead = document.createElement('div');
+        selHead.style.display = 'flex'; selHead.style.justifyContent = 'space-between'; selHead.style.alignItems = 'center'; selHead.style.marginBottom = '6px';
+        var selTitle = document.createElement('div');
+        selTitle.className = 'kicker';
+        selTitle.textContent = state.mapSelectedCity + ' ilanları (' + byCity[state.mapSelectedCity].length + ')';
+        selHead.appendChild(selTitle);
+        var closeBtn = document.createElement('button');
+        closeBtn.className = 'btn-ghost btn-sm';
+        closeBtn.textContent = 'Kapat';
+        closeBtn.onclick = function(){ state.mapSelectedCity = null; Game.render(); };
+        selHead.appendChild(closeBtn);
+        selCard.appendChild(selHead);
+        byCity[state.mapSelectedCity].forEach(function(item){ selCard.appendChild(self.renderRow(item, {})); });
+        container.appendChild(selCard);
+      }
+      return;
     }
 
     h2.innerHTML = (isMine ? 'İlanlarım' : 'İlanlar') + ' <span class="count">(' + filtered.length + ')</span>';

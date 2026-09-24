@@ -3,7 +3,8 @@ import {
   SKILL_XP_PER_LEVEL, CONSTRUCTION_COST_PER_M2,
   INSPECT_MISS_CHANCE, EKSPERTIZ_BASE_COST, TRAMER_COST, TRAMER_MISS_CHANCE,
   BOOST_COST, BOOST_DAYS, KASKO_DAILY_RATE, KASKO_MIN_DAILY,
-  TRAVEL_COST_PER_UNIT, TRAVEL_MIN_COST, TRAVEL_HOURS_PER_UNIT
+  TRAVEL_CAR_COST_PER_UNIT, TRAVEL_CAR_MIN_COST, TRAVEL_CAR_HOURS_PER_UNIT,
+  TRAVEL_BUS_COST_PER_UNIT, TRAVEL_BUS_MIN_COST, TRAVEL_BUS_HOURS_PER_UNIT
 } from '../data/constants.js';
 
 // =====================================================================
@@ -230,7 +231,7 @@ export var TransactionManager = {
     };
   },
 
-  // --- Parça alımı ---
+  // --- Parça alımı (bulunduğun şehirdeki parçacıdan, anında) ---
   buyPart: function(player, brand, marketEntry){
     var hours = 0.6;
     return {
@@ -240,11 +241,32 @@ export var TransactionManager = {
       cost: marketEntry.price,
       durationMs: this.hoursToRealMs(hours),
       durationLabel: this.hoursLabel(hours) + ' (tedarikçiden teslim)',
-      riskLabel:'Risksiz.',
+      riskLabel:'Risksiz — bu şehirdeki parçacıdan, elden teslim.',
       confirmLabel:'Satın Al',
-      phases:['Tedarikçi aranıyor…','Parça kargoya veriliyor…','Parça teslim alınıyor…']
+      phases:['Tedarikçi aranıyor…','Parça hazırlanıyor…','Parça teslim alınıyor…']
     };
   },
+
+  // --- Parça alımı, başka şehirden kargoyla ---
+  buyPartCargo: function(player, brand, marketEntry, shippingCost, deliveryDays){
+    var hours = 0.4;
+    var totalCost = marketEntry.price + shippingCost;
+    return {
+      type:'BUY_PART_CARGO',
+      title:'Yedek Parça Sipariş Et (Kargo)',
+      message: brand + ' için "' + marketEntry.name + '" ' + marketEntry.city + ' şehrindeki parçacıdan kargoyla sipariş edilecek.',
+      cost: totalCost,
+      partPrice: marketEntry.price,
+      shippingCost: shippingCost,
+      deliveryDays: deliveryDays,
+      durationMs: this.hoursToRealMs(hours),
+      durationLabel: 'Kargo ile ' + deliveryDays + ' gün içinde ulaşır',
+      riskLabel:'Şehir dışından kargo — parça fiyatına ' + this.fmtCargo(shippingCost) + ' kargo ücreti eklendi, ' + deliveryDays + ' gün içinde elinize ulaşır.',
+      confirmLabel:'Kargoyla Sipariş Ver',
+      phases:['Sipariş oluşturuluyor…','Ödeme alınıyor…','Parça kargoya veriliyor…']
+    };
+  },
+  fmtCargo: function(n){ return n.toLocaleString('tr-TR') + ' ₺'; },
 
   // --- Dükkan masrafı ---
   shopUpgrade: function(player, shop, opt){
@@ -295,20 +317,33 @@ export var TransactionManager = {
     };
   },
 
-  // --- Şehirler arası seyahat (Harita ekranı) ---
-  travel: function(player, fromCity, toCity, distance){
-    var cost = Math.max(TRAVEL_MIN_COST, Math.round(distance * TRAVEL_COST_PER_UNIT));
-    var hours = Math.max(0.3, distance * TRAVEL_HOURS_PER_UNIT);
+  // --- Şehirler arası seyahat (Harita ekranı) — Araba ya da Otobüs modu ---
+  // mode: 'car' (seyahat aracınla — hızlı, masraflı, km ekler) ya da
+  // 'bus' (herkese açık otobüs — ucuz, daha yavaş, hiçbir aracın km'sini
+  // etkilemez). Çağıran taraf (Game.doTravel) 'car' için travelCarId'nin
+  // seçili olduğunu önceden kontrol etmelidir.
+  travel: function(player, fromCity, toCity, distance, mode){
+    var isCar = mode === 'car';
+    var costPerUnit = isCar ? TRAVEL_CAR_COST_PER_UNIT : TRAVEL_BUS_COST_PER_UNIT;
+    var minCost = isCar ? TRAVEL_CAR_MIN_COST : TRAVEL_BUS_MIN_COST;
+    var hoursPerUnit = isCar ? TRAVEL_CAR_HOURS_PER_UNIT : TRAVEL_BUS_HOURS_PER_UNIT;
+    var cost = Math.max(minCost, Math.round(distance * costPerUnit));
+    var hours = Math.max(isCar ? 0.3 : 0.6, distance * hoursPerUnit);
     return {
       type:'TRAVEL',
-      title:'Şehre Git',
-      message: fromCity + ' şehrinden ' + toCity + ' şehrine yolculuk yapılacak.',
+      mode: isCar ? 'car' : 'bus',
+      title: isCar ? 'Arabayla Şehre Git' : 'Otobüsle Şehre Git',
+      message: fromCity + ' şehrinden ' + toCity + ' şehrine ' + (isCar ? 'kendi seyahat aracınla' : 'otobüsle') + ' yolculuk yapılacak.',
       cost: cost,
       durationMs: this.hoursToRealMs(hours),
       durationLabel: this.hoursLabel(hours),
-      riskLabel:'Risksiz — vardığında o şehrin parçacısına ve fiyatlarına erişirsin.',
-      confirmLabel:'Yola Çık',
-      phases:['Bilet/yakıt ayarlanıyor…','Yolda…',toCity + '\'e varıldı…']
+      riskLabel: isCar
+        ? 'Daha hızlı ama daha masraflı — seyahat aracının km\'si bu yolculukla artar.'
+        : 'Daha ucuz ama daha yavaş — hiçbir aracının km\'si etkilenmez.',
+      confirmLabel: isCar ? 'Arabayla Yola Çık' : 'Otobüse Bin',
+      phases: isCar
+        ? ['Araç hazırlanıyor…','Yolda…',toCity + '\'e varıldı…']
+        : ['Otobüs bileti alınıyor…','Yolda…',toCity + '\'e varıldı…']
     };
   },
 
