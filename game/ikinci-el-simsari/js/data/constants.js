@@ -24,20 +24,20 @@ export const CAR_MODELS = [
 ];
 export const COLORS = ["Beyaz","Gri","Siyah","Kırmızı","Lacivert","Gümüş","Bej","Yeşil"];
 export const CITIES = ["İstanbul","Ankara","İzmir","Bursa","Kocaeli","Antalya","Gaziantep","Konya","Eskişehir","Mersin"];
-// Harita ekranı için basitleştirilmiş (şematik) şehir konumları —
-// gerçek coğrafi hassasiyet hedeflenmez, sadece tanınabilir bir düzen.
-// viewBox 0 0 400 200 üzerinde x/y konumları.
+// Harita ekranı için gerçek Türkiye ana hatlarıyla orantılı şehir konumları —
+// enlem/boylam değerlerinden türetilmiştir (bkz. MapView.js TURKEY_PATH,
+// aynı dönüşümle hesaplanmıştır). viewBox "0 0 316 195" üzerinde x/y.
 export const CITY_COORDS = {
-  "İstanbul": {x:63, y:30},
-  "Ankara": {x:143, y:63},
-  "İzmir": {x:23, y:108},
-  "Bursa": {x:65, y:54},
-  "Kocaeli": {x:82, y:36},
-  "Antalya": {x:99, y:153},
-  "Gaziantep": {x:240, y:147},
-  "Konya": {x:137, y:123},
-  "Eskişehir": {x:95, y:66},
-  "Mersin": {x:181, y:156}
+  "İstanbul": {x:52.5, y:34.7},
+  "Ankara": {x:114.6, y:67.1},
+  "İzmir": {x:23.2, y:112.4},
+  "Bursa": {x:54.0, y:59.6},
+  "Kocaeli": {x:67.7, y:41.9},
+  "Antalya": {x:80.4, y:158.0},
+  "Gaziantep": {x:187.1, y:152.9},
+  "Konya": {x:108.7, y:128.9},
+  "Eskişehir": {x:77.3, y:71.6},
+  "Mersin": {x:143.2, y:161.0}
 };
 export const TRANS = ["Manuel","Otomatik"];
 export const FUEL = ["Benzin","Dizel","LPG'li Benzin","Hibrit"];
@@ -192,16 +192,37 @@ export const AMBIENT_EVENTS = [
   "Bu ay motorlu taşıtlar vergisi taksidi hatırlatması geldi."
 ];
 
+// NOT: "Ağır Hasar Onarım Seti" adlı katalog kalemi kaldırıldı — ağır
+// hasar/şasi-kaporta tamiri bir raftan alınan "parça" değildir, gerçek
+// hayatta olduğu gibi bu tür işler sadece Ustalar/tamirci hizmetiyle
+// (işçilik + malzeme birlikte) yapılır.
 export const PARTS_CATALOG = [
   {tag:"motor", name:"Motor / Şanzıman Parçası", basePrice:9000},
   {tag:"boya", name:"Kaporta / Boya Malzemesi", basePrice:1800},
-  {tag:"diger", name:"Lastik / Fren / Klima Sarfı", basePrice:1100},
-  {tag:"hasar", name:"Ağır Hasar Onarım Seti", basePrice:7000}
+  {tag:"diger", name:"Lastik / Fren / Klima Sarfı", basePrice:1100}
 ];
 export const SKILL_LABELS = { tamir:"Tamir Ustalığı", pazarlik:"Pazarlık Ustalığı", ekspertiz:"Ekspertiz Gözü", isletme:"İşletmecilik", sabir:"Sabır" };
 export const SKILL_XP_PER_LEVEL = 120;
 
 export const BUYER_NAMES = ["Cem Bey","Selin Hanım","Tolga Bey","Burcu Hanım","İsmail Bey","Nazlı Hanım","Emre Bey","Gül Hanım","Volkan Bey","Aslı Hanım"];
+
+// ---- İlan sahibi kimliği: özel satıcı isimleri + galeri (kurumsal) isimleri ----
+// sahibinden.com tarzı kısaltılmış isim gösterimi ("Ahmet Y.") — bireysel
+// satıcılar bu havuzdan rastgele bir isim alır.
+export const SELLER_NAMES = [
+  "Ahmet Y.","Mehmet K.","Ayşe D.","Fatma S.","Mustafa T.","Emine B.",
+  "Hüseyin A.","Zeynep C.","Hasan Ö.","Elif M.","Ali R.","Hatice N.",
+  "İbrahim F.","Meryem G.","Yusuf P.","Sultan Ş.","Ömer L.","Havva V.",
+  "Murat E.","Esra K."
+];
+// Birden fazla arabayı aynı anda satan sabit galeri (oto bayii) isimleri —
+// araba ilanlarının bir kısmı bireysel satıcı yerine bunlardan birine ait
+// olur (bkz. Market.makeCar, GALERI_CAR_CHANCE).
+export const GALERI_NAMES = [
+  "Narin Motorlu Araçlar","Vatan Oto Galeri","Anadolu Otomotiv",
+  "Güven Oto Pazarı","Elit Galeri","Best Car İkinci El"
+];
+export const GALERI_CAR_CHANCE = 0.35;
 export const BUYER_DISCOUNT_LINES = [
   "aracınızı/ürününüzü beğendim ama biraz yüksek, {offer} yaparsanız hemen alırım",
   "elimde {offer} nakit var, bugün almak isterim",
@@ -296,11 +317,16 @@ export const BOOST_ATTRACT_BONUS = 0.18;
 
 // ---- Kasko Sigortası ----
 // Sahip olunan araçlar için isteğe bağlı sigorta: günlük küçük bir prim
-// karşılığında kaza/kazık zararının büyük kısmını karşılar.
-export const KASKO_DAILY_RATE = 0.00045; // aracın güncel değerinin günlük oranı
-export const KASKO_MIN_DAILY = 150;
-export const KASKO_DEDUCTIBLE = 8000; // muafiyet — sigortalıyken kazada sadece bu ödenir
-export const KAZA_DAILY_CHANCE = 0.012;
+// karşılığında kaza zararının büyük kısmını karşılar. Dengelendi: kaza
+// ihtimali makul sürede fark edilecek kadar sık (KAZA_DAILY_CHANCE), prim
+// ucuz, muafiyet ise tipik bir kaza hasarının (FAULT_POOL_CAR loss'ları,
+// ~14.000-385.000 TL) çok altında — böylece kasko net ve anlaşılır bir
+// risk yönetimi kazanır: ucuz düzenli prim öder, büyük/öngörülemeyen
+// hasar riskinden korunursun.
+export const KASKO_DAILY_RATE = 0.0003; // aracın güncel değerinin günlük oranı
+export const KASKO_MIN_DAILY = 100;
+export const KASKO_DEDUCTIBLE = 5000; // muafiyet — sigortalıyken kazada sadece bu ödenir
+export const KAZA_DAILY_CHANCE = 0.02;
 
 // ---- İtibar (Satıcı Puanı) ----
 // sahibinden'deki satıcı puanı gibi — satış geçmişine göre yıldız
@@ -308,11 +334,20 @@ export const KAZA_DAILY_CHANCE = 0.012;
 export const REPUTATION_MAX_STARS = 5;
 
 // ---- Harita / Seyahat ----
-// Şehirler arası mesafe, CITY_COORDS üzerindeki basit Öklid uzaklığıdır.
-// Maliyet ve süre bu mesafeyle orantılı olarak hesaplanır.
-export const TRAVEL_COST_PER_UNIT = 1200;
-export const TRAVEL_MIN_COST = 5000;
+// Şehirler arası mesafe, CITY_COORDS üzerindeki basit Öklid uzaklığıdır
+// (bu koordinatlar doğrudan enlem/boylamdan türetildiği için mesafe birimi
+// kabaca gerçek coğrafyayla orantılıdır). Maliyet artık otobüs bileti/yakıt
+// seviyesinde ucuz — sık ve sıradan bir eylem olsun diye kasıtlı olarak
+// düşük tutuldu (yakın şehir birkaç yüz TL, en uzak şehir bile ~2.000 TL
+// civarı).
+export const TRAVEL_COST_PER_UNIT = 12;
+export const TRAVEL_MIN_COST = 250;
 export const TRAVEL_HOURS_PER_UNIT = 0.07;
+// Seyahat aracı olarak seçilmiş bir arabanın km'sinin, kat edilen şematik
+// mesafe başına ne kadar artacağı (bkz. Game.doTravel). ~6.5, koordinat
+// sistemimizdeki 1 birimlik mesafenin gerçek dünyada kabaca kaç km'ye denk
+// geldiğine göre seçildi (örn. İstanbul-Ankara ~70 birim ≈ 455 km).
+export const TRAVEL_KM_PER_UNIT = 6.5;
 
 // ---- Yedek Parçacı fiyat farkı ----
 // Her şehirdeki parçacının kendi (gün başına sabit) fiyat çarpanı vardır —

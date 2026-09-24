@@ -58,9 +58,16 @@ export var GarageView = {
       if(item.forSale) statusParts.push('Satışta (' + item.daysListed + ' gündür, ' + fmt(item.listedPrice) + ')' + (item.boosted ? ' · öne çıkarılmış' : ''));
       if(item.category==='arsa' && item.hasHouse) statusParts.push('Üzerinde ev var.');
       else if(item.category==='arsa' && item.underConstruction) statusParts.push('İnşaat sürüyor (' + item.constructionDaysLeft + ' gün kaldı).');
-      if(item.category==='araba') statusParts.push(item.insured ? 'Kaskolu.' : 'Kaskosuz.');
+      if(item.category==='araba') statusParts.push(item.insured ? 'Kaskolu — kaza olursa sadece muafiyet öder.' : 'Kaskosuz — kaza olursa tüm hasar sana ait.');
       status.textContent = statusParts.join(' ');
       card.appendChild(status);
+      if(item.category==='araba' && Game.player.travelCarId===item.id){
+        var travelBadge = document.createElement('div');
+        travelBadge.className = 'badge';
+        travelBadge.style.background = 'var(--link)'; travelBadge.style.marginTop = '4px'; travelBadge.style.display = 'inline-block';
+        travelBadge.textContent = 'SEYAHAT ARACIN';
+        card.appendChild(travelBadge);
+      }
 
       if(item.forSale && item.pendingOffer){
         var offerBox = document.createElement('div');
@@ -136,6 +143,13 @@ export var GarageView = {
         kaskoBtn.disabled = OperationManager.isBusy();
         kaskoBtn.onclick = function(){ Game.doToggleKasko(item.id); };
         row.appendChild(kaskoBtn);
+
+        var isTravelCar = Game.player.travelCarId === item.id;
+        var travelBtn = document.createElement('button');
+        travelBtn.className = isTravelCar ? 'btn-ghost btn-sm' : 'btn-orange btn-sm';
+        travelBtn.textContent = isTravelCar ? 'Seyahat Aracımdan Çıkar' : 'Seyahat Aracım Yap';
+        travelBtn.onclick = function(){ Game.setTravelCar(item.id); };
+        row.appendChild(travelBtn);
       }
       card.appendChild(row);
 

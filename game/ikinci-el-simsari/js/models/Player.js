@@ -17,6 +17,9 @@ export function Player(){
   this.achievements = [];
   // Harita / seyahat sistemi: oyuncunun şu anki şehri (bkz. Game.doTravel)
   this.currentCity = 'İstanbul';
+  // Seyahat aracı: garajdaki bir arabanın id'si — seçiliyse seyahatlerde
+  // "o araçla gidiliyor" sayılır ve km'si artar (bkz. GarageView, Game.doTravel)
+  this.travelCarId = null;
 }
 Player.prototype.skillLevel = function(key){
   return clamp(1 + Math.floor(this.skills[key]/SKILL_XP_PER_LEVEL), 1, 10);

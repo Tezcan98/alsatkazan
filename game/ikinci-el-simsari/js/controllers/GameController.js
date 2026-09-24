@@ -12,9 +12,10 @@ import {
   CAR_DAILY_HOLDING_COST, ARSA_DAILY_HOLDING_COST, STALE_LISTING_DAYS, STALE_DEPRECIATION_RATE,
   BOOST_DAYS, BOOST_ATTRACT_BONUS, KASKO_DAILY_RATE, KASKO_MIN_DAILY, KASKO_DEDUCTIBLE, KAZA_DAILY_CHANCE,
   FAULT_POOL_CAR, REPUTATION_MAX_STARS, TRAMER_MISS_CHANCE, TRAMER_KAZA_TYPES,
-  CITY_COORDS
+  CITY_COORDS, TRAVEL_KM_PER_UNIT
 } from '../data/constants.js';
 import { ACHIEVEMENTS } from './achievements.js';
+import { generateSellerReply } from '../services/SellerReplyService.js';
 
 // =====================================================================
 //  OYUN DENETLEYİCİSİ (Controller katmanı)
@@ -44,7 +45,10 @@ export var Game = {
     // SBM konuşması içinde birikir (bkz. doTramerQuery / MesajlarView).
     sbmMessages: [],
     sbmThreadOpen: false,
-    controlPanelOpen: false
+    controlPanelOpen: false,
+    // Harita: seçili şehrin ilanlarını haritanın altında listelemek için
+    // (bkz. MapView) — bir şehirdeki ilan işaretine tıklanınca dolar.
+    mapSelectedCity: null
   },
   player: new Player(),
   render: function(){ /* main.js tarafından değiştirilir */ },
@@ -209,8 +213,26 @@ export var Game = {
       player.currentCity = city;
       self.addLog('Seyahat edildi: ' + fromCity + ' → ' + city + ' — ' + fmt(desc.cost), 'neg');
       toast('Artık ' + city + ' şehrindesin.');
+      // Seyahat aracı seçiliyse o aracın km'si kat edilen mesafeyle artar —
+      // seçili değilse (toplu taşıma) hiçbir aracın km'si etkilenmez.
+      var travelCar = player.travelCarId ? self.findInv(player.travelCarId) : null;
+      if(travelCar && travelCar.category==='araba'){
+        var addedKm = Math.round(dist * TRAVEL_KM_PER_UNIT);
+        travelCar.km += addedKm;
+        self.addLog(travelCar.title + ' ile gidildi, km ' + addedKm.toLocaleString('tr-TR') + ' arttı (toplam ' + travelCar.km.toLocaleString('tr-TR') + ' km).', '');
+      }
       self.render();
     });
+  },
+
+  // ---- Seyahat aracı seç / seçimi kaldır (bkz. GarageView) ----
+  setTravelCar: function(itemId){
+    var player = this.player;
+    var item = itemId ? this.findInv(itemId) : null;
+    if(itemId && (!item || item.category!=='araba')) return;
+    player.travelCarId = (player.travelCarId === itemId) ? null : itemId;
+    toast(player.travelCarId ? 'Seyahat aracın ayarlandı.' : 'Seyahat aracı kaldırıldı.');
+    this.render();
   },
 
   randomPlateFallback: function(){ return '34 ABC ' + rnd(100,999); },
@@ -224,6 +246,12 @@ export var Game = {
     var self = this, state = this.state, player = this.player;
     var item = this.findListing(id);
     if(!item) return;
+    // Araba ilanları artık kendi bulunduğu şehre bağlı — o şehirde
+    // olmadan satın alınamaz (bkz. DetailView "Bu şehre git" düğmesi).
+    if(item.category==='araba' && item.location && item.location !== player.currentCity){
+      toast('Bu araç ' + item.location + ' şehrinde — önce oraya gitmelisin.');
+      return;
+    }
     var hiddenLoss = item.faults.filter(function(f){return f.hidden;}).reduce(function(s,f){return s+f.loss;},0);
     var desc = TransactionManager.purchase(player, item);
     this.perform(desc, function(){
@@ -315,6 +343,20 @@ export var Game = {
       }
     }
     item.messages.push(this.stampMsg({from:'seller', text:reply}));
+    this.render();
+  },
+
+  // Oyuncunun ilan sahibine serbest metin yazdığı, hazır soru çiplerinin
+  // dışındaki mesaj akışı. Hazır sorular (askQuestion) hâlâ kural tabanlı
+  // bir yanıt alır; burada ise satıcı yanıtı SellerReplyService'ten gelir
+  // — o servis şu an bir stub olduğundan (gelecekte Gemini bağlanacak)
+  // null döner ve bilerek OTOMATİK BİR YANIT EKLENMEZ.
+  sendFreeMessage: function(id, text){
+    var item = this.findAny(id);
+    if(!item || !text || !text.trim()) return;
+    item.messages.push(this.stampMsg({from:'me', text: text.trim()}));
+    var reply = generateSellerReply(text.trim(), item); // stub: her zaman null
+    if(reply){ item.messages.push(this.stampMsg({from:'seller', text: reply})); }
     this.render();
   },
 

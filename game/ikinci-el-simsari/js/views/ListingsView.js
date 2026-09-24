@@ -1,6 +1,7 @@
 import { fmt } from '../utils.js';
 import { Game } from '../controllers/GameController.js';
 import { OperationManager } from '../services/OperationManager.js';
+import { buildPartRow } from './PartsCard.js';
 
 // =====================================================================
 //  İLANLAR (Görünüm katmanı)
@@ -94,8 +95,10 @@ export var ListingsView = {
     filterbar.className = 'filterbar';
     var myListingsCount = state.inventory.filter(function(i){return i.forSale;}).length;
     var favCount = state.listings.filter(function(l){return l.favorite;}).length;
+    var partsCount = state.partsMarket.filter(function(p){return p.city===Game.player.currentCity;}).length;
     [
       ['hepsi','Hepsi'], ['araba','Araba'], ['arsa','Arsa'], ['dukkan','Dükkan'],
+      ['parca','Yedek Parça (' + partsCount + ')'],
       ['favoriler','★ Favoriler (' + favCount + ')'],
       ['ilanlarim','İlanlarım (' + myListingsCount + ')']
     ].forEach(function(f){
@@ -108,6 +111,27 @@ export var ListingsView = {
     container.appendChild(filterbar);
 
     var isMine = state.listingFilter === 'ilanlarim';
+    var isParts = state.listingFilter === 'parca';
+
+    if(isParts){
+      var pH2 = document.createElement('h2');
+      pH2.className = 'section';
+      var cityParts = state.partsMarket.filter(function(p){return p.city===Game.player.currentCity;});
+      pH2.innerHTML = 'Yedek Parça <span class="count">(' + cityParts.length + ')</span>';
+      container.appendChild(pH2);
+      var pNote = document.createElement('div');
+      pNote.className = 'desc-note';
+      pNote.style.marginBottom = '10px';
+      pNote.textContent = 'Bu parçacı: ' + Game.player.currentCity + ' — doğrudan satın alınır, ekspertiz gerekmez. Fiyatlar şehirden şehre ve güne göre değişir.';
+      container.appendChild(pNote);
+      if(cityParts.length===0){
+        var pe = document.createElement('div'); pe.className='empty'; pe.textContent='Bugün bu şehirdeki parçacıda stokta ürün yok.';
+        container.appendChild(pe);
+      } else {
+        cityParts.forEach(function(entry){ container.appendChild(buildPartRow(entry)); });
+      }
+      return;
+    }
 
     // ---- sıralama + fiyat aralığı (yalnızca pazar ilanlarında) ----
     if(!isMine){

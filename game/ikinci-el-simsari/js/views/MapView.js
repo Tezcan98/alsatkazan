@@ -3,14 +3,18 @@ import { Game } from '../controllers/GameController.js';
 import { TransactionManager } from '../services/TransactionManager.js';
 import { OperationManager } from '../services/OperationManager.js';
 import { CITIES, CITY_COORDS } from '../data/constants.js';
+import { ListingsView } from './ListingsView.js';
 
 // =====================================================================
-//  HARİTA (Görünüm katmanı) — şehirler arası basit şematik harita
+//  HARİTA (Görünüm katmanı) — gerçek Türkiye ana hatlı harita
 // =====================================================================
-// Gerçek coğrafi hassasiyet hedeflenmez: CITY_COORDS üzerindeki basit
-// (x,y) konumlarıyla tanınabilir, sade bir düğüm haritası çizilir.
-// Oyuncunun bulunduğu şehir vurgulanır, diğer şehirlere tıklanınca
-// mesafeye göre ücretli+süreli bir "seyolculuk" (Game.doTravel) başlar.
+// CITY_COORDS ve aşağıdaki TURKEY_PATH aynı basit enlem/boylam ->
+// (x,y) dönüşümüyle üretildi (lon 26-45°D, lat 36-42°K aralığı,
+// x=(lon-26)*16+5, y=5+(42-lat)*30), böylece şehirler ana hat içinde
+// gerçekçi göreli konumlarında durur. Kesin bir coğrafi projeksiyon
+// değildir ama Türkiye'nin tanınabilir silüetini (Ege kıyısının
+// girintili-çıkıntılı batısı, Karadeniz'in nispeten düz kuzeyi, Hatay
+// çıkıntısı, doğudaki dağlık sınır hattı) yansıtır.
 var SVG_NS = 'http://www.w3.org/2000/svg';
 function el(tag, attrs){
   var n = document.createElementNS(SVG_NS, tag);
@@ -18,9 +22,12 @@ function el(tag, attrs){
   return n;
 }
 
-// Çok kaba, şematik bir Türkiye silüeti — sadece atmosfer için, coğrafi
-// olarak kesin değildir.
-var TURKEY_BLOB = 'M18,66 L55,28 L120,14 L210,18 L290,26 L345,44 L378,68 L372,102 L340,134 L280,158 L200,174 L120,176 L58,156 L22,116 Z';
+var TURKEY_PATH = 'M29.0,5.0 L37.0,8.0 L53.0,6.5 L85.0,12.5 L117.0,17.0 L149.0,26.0 L181.0,32.0 ' +
+  'L213.0,33.5 L253.0,20.0 L277.0,20.0 L285.0,35.0 L301.0,65.0 L305.8,74.0 L297.8,83.0 L305.8,116.0 ' +
+  'L293.0,146.0 L269.0,146.0 L249.8,155.0 L249.8,158.0 L197.0,164.0 L176.2,167.0 L168.2,185.0 ' +
+  'L167.4,186.5 L161.8,182.0 L142.6,179.0 L117.0,179.0 L80.2,167.0 L53.0,176.0 L27.4,167.0 L21.0,155.0 ' +
+  'L16.2,131.0 L21.0,113.0 L14.6,95.0 L19.4,80.0 L21.0,65.0 L17.8,53.0 L9.8,38.0 L19.4,29.0 Z';
+var VIEWBOX = '0 0 316 195';
 
 export var MapView = {
   render: function(container){
@@ -41,16 +48,26 @@ export var MapView = {
 
     var kicker = document.createElement('div');
     kicker.className = 'desc-note';
-    kicker.style.marginBottom = '10px';
-    kicker.textContent = 'Şu an: ' + player.currentCity + ' — başka bir şehre gitmek için üzerine tıkla. Yolculuk mesafeye göre para ve zaman alır.';
+    kicker.style.marginBottom = '4px';
+    kicker.textContent = 'Şu an: ' + player.currentCity + ' — başka bir şehre gitmek için üzerine tıkla. Kırmızı rozetler o şehirdeki ilan sayısını gösterir, tıklayınca ilanları görürsün.';
     container.appendChild(kicker);
+
+    var travelCar = player.travelCarId ? Game.findInv(player.travelCarId) : null;
+    var carLine = document.createElement('div');
+    carLine.className = 'desc-note';
+    carLine.style.marginBottom = '10px';
+    carLine.style.fontStyle = 'normal';
+    carLine.innerHTML = travelCar
+      ? 'Seyahat aracın: <b>' + travelCar.title + '</b> (' + travelCar.km.toLocaleString('tr-TR') + ' km) — seyahat ettikçe km artar.'
+      : 'Seyahat aracın seçili değil — toplu taşımayla gidiyorsun (araç km artmaz). Garaj sekmesinden bir araba seçebilirsin.';
+    container.appendChild(carLine);
 
     var mapCard = document.createElement('div');
     mapCard.className = 'card';
     mapCard.style.padding = '10px';
 
-    var svg = el('svg', {viewBox:'0 0 400 200', 'class':'map-svg'});
-    svg.appendChild(el('path', {d: TURKEY_BLOB, fill:'#eef3ea', stroke:'#cfe0c8', 'stroke-width':'1.5'}));
+    var svg = el('svg', {viewBox: VIEWBOX, 'class':'map-svg'});
+    svg.appendChild(el('path', {d: TURKEY_PATH, fill:'#eef3ea', stroke:'#9db98f', 'stroke-width':'1.5', 'stroke-linejoin':'round'}));
 
     // İl bağlantı çizgileri: oyuncunun bulunduğu şehirden diğerlerine
     // ince kesikli çizgiler, mesafeyi görsel olarak hissettirir.
@@ -63,6 +80,13 @@ export var MapView = {
         x1:here.x, y1:here.y, x2:c.x, y2:c.y,
         stroke:'#c7cfd6', 'stroke-width':'1', 'stroke-dasharray':'3,3'
       }));
+    });
+
+    // Şehirdeki aktif ilanlar (araba/arsa/dükkan) — konuma göre gruplanır.
+    var listingsByCity = {};
+    state.listings.forEach(function(l){
+      if(!l.location) return;
+      (listingsByCity[l.location] = listingsByCity[l.location] || []).push(l);
     });
 
     CITIES.forEach(function(city){
@@ -94,10 +118,61 @@ export var MapView = {
         }
       }
       svg.appendChild(g);
+
+      // ---- İlan rozeti: o şehirde satılık ürün varsa küçük kırmızı rozet ----
+      var cityListings = listingsByCity[city];
+      if(cityListings && cityListings.length>0){
+        var bg = el('g', {'class':'map-listing-badge', style:'cursor:pointer'});
+        var badge = el('circle', {cx:c.x+8, cy:c.y-8, r:6.5, fill:'#c62828', stroke:'#fff', 'stroke-width':'1.2'});
+        bg.appendChild(badge);
+        var count = el('text', {
+          x:c.x+8, y:c.y-8+2.8, 'text-anchor':'middle',
+          'font-size':'7.5', 'font-weight':'800', fill:'#fff'
+        });
+        count.textContent = String(cityListings.length);
+        bg.appendChild(count);
+        var btitle = document.createElementNS(SVG_NS, 'title');
+        btitle.textContent = cityListings.length + ' ilan — ' + city + ' (görmek için tıkla)';
+        bg.appendChild(btitle);
+        bg.onclick = function(e){
+          e.stopPropagation();
+          if(cityListings.length===1){
+            state.openDetailId = cityListings[0].id;
+            state.mapSelectedCity = null;
+          } else {
+            state.mapSelectedCity = (state.mapSelectedCity===city) ? null : city;
+          }
+          Game.render();
+        };
+        svg.appendChild(bg);
+      }
     });
 
     mapCard.appendChild(svg);
     container.appendChild(mapCard);
+
+    // ---- Seçili şehrin ilan listesi (haritanın altında, tıklanınca detay açılır) ----
+    if(state.mapSelectedCity && listingsByCity[state.mapSelectedCity]){
+      var selCard = document.createElement('div');
+      selCard.className = 'card';
+      selCard.style.marginTop = '10px';
+      var selHead = document.createElement('div');
+      selHead.style.display = 'flex'; selHead.style.justifyContent = 'space-between'; selHead.style.alignItems = 'center'; selHead.style.marginBottom = '6px';
+      var selTitle = document.createElement('div');
+      selTitle.className = 'kicker';
+      selTitle.textContent = state.mapSelectedCity + ' ilanları (' + listingsByCity[state.mapSelectedCity].length + ')';
+      selHead.appendChild(selTitle);
+      var closeBtn = document.createElement('button');
+      closeBtn.className = 'btn-ghost btn-sm';
+      closeBtn.textContent = 'Kapat';
+      closeBtn.onclick = function(){ state.mapSelectedCity = null; Game.render(); };
+      selHead.appendChild(closeBtn);
+      selCard.appendChild(selHead);
+      listingsByCity[state.mapSelectedCity].forEach(function(item){
+        selCard.appendChild(ListingsView.renderRow(item, {}));
+      });
+      container.appendChild(selCard);
+    }
 
     var h2b = document.createElement('h2');
     h2b.className = 'section';
@@ -110,7 +185,8 @@ export var MapView = {
       row.className = 'repair-fault-row';
       var lbl = document.createElement('div');
       lbl.className = 'flabel';
-      lbl.innerHTML = '<b>' + city + '</b>' + (isHere ? ' <span class="tag-chip">buradasın</span>' : '');
+      var cnt = listingsByCity[city] ? listingsByCity[city].length : 0;
+      lbl.innerHTML = '<b>' + city + '</b>' + (isHere ? ' <span class="tag-chip">buradasın</span>' : '') + (cnt>0 ? ' <span class="tag-chip">' + cnt + ' ilan</span>' : '');
       row.appendChild(lbl);
       if(isHere){
         var goBtn = document.createElement('button');

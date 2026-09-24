@@ -7,7 +7,8 @@ import {
   SELLER_REASONS_CAR, SELLER_USAGE_CAR, SELLER_CLOSING_CAR,
   SELLER_REASONS_ARSA, SELLER_CLOSING_ARSA, SELLER_REASONS_DUKKAN,
   DEAL_CHANCE, DEAL_DISCOUNT_MIN, DEAL_DISCOUNT_MAX,
-  PARTS_CITY_VARIANCE_MIN, PARTS_CITY_VARIANCE_MAX
+  PARTS_CITY_VARIANCE_MIN, PARTS_CITY_VARIANCE_MAX,
+  SELLER_NAMES, GALERI_NAMES, GALERI_CAR_CHANCE
 } from '../data/constants.js';
 
 // =====================================================================
@@ -83,6 +84,9 @@ export var Market = {
     var askingPrice = Math.max(165000, Math.round(askingBase*noise));
 
     var carDef = pick(CAR_MODELS);
+    // ---- Satıcı kimliği: bir kısmı bireysel satıcı, bir kısmı (galeriler)
+    // birden fazla aracı aynı anda satan sabit bayii isimlerinden biri ----
+    var isGaleri = Math.random() < GALERI_CAR_CHANCE;
     return new Car({
       title: year + " " + carDef.brand + " " + carDef.model,
       brand: carDef.brand,
@@ -92,6 +96,8 @@ export var Market = {
       partStatus: partStatus,
       plate: this.makePlate(),
       chassisSuffix: String(rnd(1000,10000)),
+      sellerName: isGaleri ? null : pick(SELLER_NAMES),
+      galeriName: isGaleri ? pick(GALERI_NAMES) : null,
       trueValue: baseValue, askingPrice: askingPrice, faults: faults, sellerHonesty: Math.random()
     });
   },
@@ -121,6 +127,7 @@ export var Market = {
       m2: m2, imar: pick(ARSA_IMAR), adaParsel: rnd(100,999) + " / " + rnd(1,40),
       location: pick(CITIES),
       description: description,
+      sellerName: pick(SELLER_NAMES),
       trueValue: baseValue, askingPrice: askingPrice, faults: issues, sellerHonesty: Math.random()
     });
   },
@@ -137,6 +144,7 @@ export var Market = {
       rent: rnd(st.rent[0], st.rent[1]),
       location: pick(CITIES),
       description: description,
+      sellerName: pick(SELLER_NAMES),
       trueValue: 0, faults: [],
       askingPrice: rnd(st.price[0], st.price[1]),
       accepts: st.accepts

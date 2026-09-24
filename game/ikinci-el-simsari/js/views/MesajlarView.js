@@ -224,6 +224,32 @@ export var MesajlarView = {
         qbtns.appendChild(qb);
       });
       container.appendChild(qbtns);
+
+      // ---- Serbest metin mesaj — hazır sorulara ek olarak istediğin
+      // her şeyi yazabilirsin. Şu an satıcı buna otomatik yanıt vermiyor
+      // (bkz. Game.sendFreeMessage / SellerReplyService — gelecekte
+      // gerçek bir LLM/Gemini yanıtı buraya bağlanacak). ----
+      var freeRow = document.createElement('div');
+      freeRow.style.display = 'flex'; freeRow.style.gap = '6px'; freeRow.style.marginTop = '10px';
+      var freeInput = document.createElement('input');
+      freeInput.type = 'text';
+      freeInput.placeholder = 'Satıcıya yaz…';
+      freeInput.style.flex = '1 1 auto';
+      freeInput.style.padding = '8px'; freeInput.style.border = '1px solid var(--border)'; freeInput.style.borderRadius = '4px';
+      freeRow.appendChild(freeInput);
+      var sendBtn = document.createElement('button');
+      sendBtn.className = 'btn-navy btn-sm';
+      sendBtn.textContent = 'Gönder';
+      function send(){
+        var text = freeInput.value;
+        if(!text || !text.trim()) return;
+        Game.sendFreeMessage(item.id, text);
+        freeInput.value = '';
+      }
+      sendBtn.onclick = send;
+      freeInput.onkeydown = function(e){ if(e.key==='Enter') send(); };
+      freeRow.appendChild(sendBtn);
+      container.appendChild(freeRow);
     }
   }
 };

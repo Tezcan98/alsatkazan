@@ -3,6 +3,7 @@ import { Game } from '../controllers/GameController.js';
 import { TransactionManager } from '../services/TransactionManager.js';
 import { OperationManager } from '../services/OperationManager.js';
 import { buildCarPartsDiagram } from './CarPartsDiagram.js';
+import { KASKO_MIN_DAILY, KASKO_DAILY_RATE, KASKO_DEDUCTIBLE } from '../data/constants.js';
 
 // =====================================================================
 //  İLAN DETAYI (Görünüm katmanı) — sağdan kayan overlay
@@ -51,6 +52,17 @@ export var DetailView = {
     h1.className = 'detail-title';
     h1.textContent = item.title;
     body.appendChild(h1);
+
+    if(!item.owned && (item.galeriName || item.sellerName)){
+      var sellerLine = document.createElement('div');
+      sellerLine.className = 'desc-note';
+      sellerLine.style.fontStyle = 'normal';
+      sellerLine.style.marginBottom = '2px';
+      sellerLine.innerHTML = item.galeriName
+        ? '<b>' + item.galeriName + '</b> <span class="tag-chip">Galeri</span>'
+        : 'Satıcı: <b>' + item.sellerName + '</b>';
+      body.appendChild(sellerLine);
+    }
 
     if(item.isDeal && !item.owned && item.originalPrice){
       var dealBanner = document.createElement('div');
@@ -150,12 +162,33 @@ export var DetailView = {
         tramerBtn.onclick = function(){ Game.doTramerQuery(item.id); };
         actions.appendChild(tramerBtn);
       }
-      var buyBtn = document.createElement('button');
-      buyBtn.className = 'btn-orange';
-      buyBtn.textContent = item.category==='dukkan' ? 'Devren Satın Al' : 'Satın Al';
-      buyBtn.disabled = busy || player.balance < item.askingPrice;
-      buyBtn.onclick = function(){ Game.doBuy(item.id); };
-      actions.appendChild(buyBtn);
+      var needsTravel = item.category==='araba' && item.location && item.location !== player.currentCity;
+      if(needsTravel){
+        var travelNote = document.createElement('div');
+        travelNote.className = 'desc-note';
+        travelNote.style.width = '100%';
+        travelNote.style.fontStyle = 'normal';
+        travelNote.textContent = 'Bu araç ' + item.location + ' şehrinde satılıyor — satın almak için önce oraya gitmelisin.';
+        actions.appendChild(travelNote);
+        var goCityBtn = document.createElement('button');
+        goCityBtn.className = 'btn-navy';
+        goCityBtn.textContent = item.location + '\'e Git';
+        goCityBtn.disabled = busy;
+        goCityBtn.onclick = function(){
+          state.openDetailId = null;
+          state.mapSelectedCity = item.location;
+          state.tab = 'harita';
+          Game.render();
+        };
+        actions.appendChild(goCityBtn);
+      } else {
+        var buyBtn = document.createElement('button');
+        buyBtn.className = 'btn-orange';
+        buyBtn.textContent = item.category==='dukkan' ? 'Devren Satın Al' : 'Satın Al';
+        buyBtn.disabled = busy || player.balance < item.askingPrice;
+        buyBtn.onclick = function(){ Game.doBuy(item.id); };
+        actions.appendChild(buyBtn);
+      }
     } else if(item.forSale){
       var unlistBtn = document.createElement('button');
       unlistBtn.className = 'btn-ghost';
@@ -220,8 +253,11 @@ export var DetailView = {
       kaskoCard.className = 'card';
       kaskoCard.style.marginBottom = '16px';
       var kaskoDesc = TransactionManager.toggleKasko(player, item);
+      var dailyPremium = Math.max(KASKO_MIN_DAILY, Math.round(item.currentValue()*KASKO_DAILY_RATE));
       kaskoCard.innerHTML = '<div class="kicker">Kasko Sigortası</div><div style="margin-top:4px;font-size:0.85rem;">' +
-        (item.insured ? 'Sigortalı — kaza ya da gizli arıza çıkarsa zararın büyük kısmı karşılanır.' : 'Sigortasız — kaza ya da gizli arıza tüm zararı sana ait olur.') + '</div>';
+        (item.insured
+          ? 'Sigortalı — günlük ~' + fmt(dailyPremium) + ' prim ödüyorsun. Kaza olursa hasar kalemi otomatik tamir edilir, sadece ' + fmt(KASKO_DEDUCTIBLE) + ' muafiyet ödersin.'
+          : 'Sigortasız — bir kaza olursa hasar bedelinin tamamı (genelde birkaç on binden yüz binlerce TL\'ye kadar) senden çıkar. Kaskoyla günlük ~' + fmt(dailyPremium) + ' prim karşılığında bu riski ' + fmt(KASKO_DEDUCTIBLE) + ' muafiyete indirirsin.') + '</div>';
       var kaskoBtn = document.createElement('button');
       kaskoBtn.className = item.insured ? 'btn-ghost btn-sm' : 'btn-orange btn-sm';
       kaskoBtn.style.marginTop = '8px';
