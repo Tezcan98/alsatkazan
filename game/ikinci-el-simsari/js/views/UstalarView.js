@@ -35,9 +35,21 @@ export var UstalarView = {
     pHead.appendChild(pIcon);
     var pdesc = document.createElement('div');
     pdesc.className = 'kicker';
-    pdesc.textContent = 'Marka bazlı parça al — kullanınca usta ücretini %40 düşürür ya da yeterli seviyede kendin tamir etmeni sağlar. Fiyatlar her gün değişir.';
+    pdesc.textContent = 'Marka bazlı parça al — kullanınca usta ücretini %40 düşürür ya da yeterli seviyede kendin tamir etmeni sağlar. Doğrudan satın alınır, ekspertiz gerekmez. Fiyatlar şehirden şehre ve güne göre değişir.';
     pHead.appendChild(pdesc);
     partsBox.appendChild(pHead);
+
+    var cityRow = document.createElement('div');
+    cityRow.className = 'desc-note';
+    cityRow.style.fontStyle = 'normal';
+    cityRow.style.marginBottom = '8px';
+    cityRow.innerHTML = 'Bu parçacı: <b>' + player.currentCity + '</b> — başka şehirdeki parçacıya bakmak için ';
+    var mapLink = document.createElement('span');
+    mapLink.className = 'link';
+    mapLink.textContent = 'Harita';
+    mapLink.onclick = function(){ state.tab = 'harita'; Game.render(); };
+    cityRow.appendChild(mapLink);
+    partsBox.appendChild(cityRow);
 
     var sel = document.createElement('select');
     sel.style.padding = '6px'; sel.style.marginBottom = '8px'; sel.style.width='100%';
@@ -58,7 +70,7 @@ export var UstalarView = {
       // (Market.refreshPartsMarket bazılarını rastgele atlar) "Stokta yok"
       // olarak, alınamaz şekilde listelenir.
       PARTS_CATALOG.forEach(function(cat){
-        var p = state.partsMarket.find(function(x){return x.brand===brand && x.tag===cat.tag;});
+        var p = state.partsMarket.find(function(x){return x.brand===brand && x.tag===cat.tag && x.city===player.currentCity;});
         var pr = document.createElement('div');
         pr.className = 'repair-fault-row';
         var lbl = document.createElement('div');

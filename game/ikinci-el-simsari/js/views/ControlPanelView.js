@@ -28,6 +28,7 @@ export var ControlPanelView = {
     var tiles = [
       { key:'ustalar', title:'Ustalar & Parçacı', desc: repairCount>0 ? repairCount + ' araç tamir bekliyor' : 'Tamirci ve yedek parça', img: IMG.icon.mechanicBilinen, badge: repairCount },
       { key:'dukkanlar', title:'Dükkanlarım', desc: state.shops.length + ' dükkan' + (tenantAlerts>0 ? ' · ' + tenantAlerts + ' kiracı talebi' : ''), img: IMG.icon.shopsPanel, badge: tenantAlerts },
+      { key:'harita', title:'Harita', desc: 'Şu an: ' + player.currentCity + ' — şehirler arası seyahat et', img: IMG.icon.ledgerPanel, badge: 0 },
       { key:'profil', title:'Profil & Yetenekler', desc: player.name + ' · ' + player.totalSales + ' satış', img: IMG.icon.profilePanel, badge: 0 }
     ];
 

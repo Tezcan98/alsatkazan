@@ -7,15 +7,14 @@ import { ConfirmDialog } from '../services/ConfirmDialog.js';
 import {
   CAR_QUESTIONS, ARSA_QUESTIONS, USTALAR, MASRAF_OPTIONS,
   TENANT_NAMES, TENANT_BUSINESS_ARABA, TENANT_BUSINESS_ARSA,
-  BUYER_NAMES, BUYER_DISCOUNT_LINES, PRICE_SCALE,
+  BUYER_NAMES, BUYER_DISCOUNT_LINES,
   CONSTRUCTION_COST_PER_M2, CONSTRUCTION_DAYS_MIN, CONSTRUCTION_DAYS_MAX, CONSTRUCTION_VALUE_MULT,
   CAR_DAILY_HOLDING_COST, ARSA_DAILY_HOLDING_COST, STALE_LISTING_DAYS, STALE_DEPRECIATION_RATE,
   BOOST_DAYS, BOOST_ATTRACT_BONUS, KASKO_DAILY_RATE, KASKO_MIN_DAILY, KASKO_DEDUCTIBLE, KAZA_DAILY_CHANCE,
-  FAULT_POOL_CAR, REPUTATION_MAX_STARS, TRAMER_MISS_CHANCE, TRAMER_KAZA_TYPES
+  FAULT_POOL_CAR, REPUTATION_MAX_STARS, TRAMER_MISS_CHANCE, TRAMER_KAZA_TYPES,
+  CITY_COORDS
 } from '../data/constants.js';
 import { ACHIEVEMENTS } from './achievements.js';
-
-function sc(n){ return Math.round(n*PRICE_SCALE); }
 
 // =====================================================================
 //  OYUN DENETLEYİCİSİ (Controller katmanı)
@@ -41,6 +40,10 @@ export var Game = {
     openDetailId: null,
     openShopId: null,
     openMessageThreadItemId: null,
+    // TRAMER/SBM sonuçları artık ilan sohbetinden ayrı, tek bir global
+    // SBM konuşması içinde birikir (bkz. doTramerQuery / MesajlarView).
+    sbmMessages: [],
+    sbmThreadOpen: false,
     controlPanelOpen: false
   },
   player: new Player(),
@@ -50,6 +53,8 @@ export var Game = {
   _boostCount: 0,
   _fullInspectCount: 0,
   _tramerCaughtCount: 0,
+  _msgSeq: 0,
+  stampMsg: function(m){ m.ts = ++this._msgSeq; return m; },
 
   init: function(){
     ConfirmDialog.init();
@@ -156,7 +161,12 @@ export var Game = {
 
       var plate = item.plate || self.randomPlateFallback();
       var chassisSuffix = item.chassisSuffix || '0000';
-      item.messages.push({from:'me', text: plate + ' plaka / ***' + chassisSuffix + ' şasi no için TRAMER kaydı sorgula.'});
+      // TRAMER/SBM sonuçları artık ilan sohbetiyle karışmıyor — kendi
+      // global SBM konuşmasına (state.sbmMessages) düşüyor.
+      self.state.sbmMessages.push(self.stampMsg({
+        itemId: item.id, itemTitle: item.title, plate: plate, from:'me',
+        text: plate + ' plaka / ***' + chassisSuffix + ' şasi no için TRAMER kaydı sorgula.'
+      }));
 
       var reportText;
       if(found.length===0){
@@ -169,13 +179,36 @@ export var Game = {
         });
         reportText = 'Kayıtlarımıza göre ***' + chassisSuffix + ' Şasi no\'lu araç ' + found.length + ' adet kazaya karışmıştır.\n' + lines.join('\n');
       }
-      item.messages.push({from:'sbm', text: reportText});
+      self.state.sbmMessages.push(self.stampMsg({
+        itemId: item.id, itemTitle: item.title, plate: plate, from:'sbm', text: reportText
+      }));
 
       self.addLog('TRAMER kaydı sorgulandı: ' + item.title + ' — ' + fmt(desc.cost), 'neg');
       self._fullInspectCount += 1;
       if(found.length>0) self._tramerCaughtCount += 1;
       player.addXp('ekspertiz', 20);
       self.checkAchievements();
+      self.render();
+    });
+  },
+
+  // ---- Harita / Seyahat ----
+  cityDistance: function(fromCity, toCity){
+    var a = CITY_COORDS[fromCity], b = CITY_COORDS[toCity];
+    if(!a || !b) return 0;
+    return Math.sqrt(Math.pow(a.x-b.x,2) + Math.pow(a.y-b.y,2));
+  },
+  doTravel: function(city){
+    var self = this, player = this.player;
+    if(!CITY_COORDS[city] || city===player.currentCity) return;
+    var dist = this.cityDistance(player.currentCity, city);
+    var desc = TransactionManager.travel(player, player.currentCity, city, dist);
+    this.perform(desc, function(){
+      player.spend(desc.cost);
+      var fromCity = player.currentCity;
+      player.currentCity = city;
+      self.addLog('Seyahat edildi: ' + fromCity + ' → ' + city + ' — ' + fmt(desc.cost), 'neg');
+      toast('Artık ' + city + ' şehrindesin.');
       self.render();
     });
   },
@@ -225,7 +258,7 @@ export var Game = {
   // yedin" olayı tetiklenir: Sabır seviyesi yükseldikçe zararın bir kısmı
   // telafi edilir (item.trueValue'ya geri eklenir) ve Sabır XP kazanılır.
   checkForKazik: function(item, hiddenLoss){
-    if(!hiddenLoss || hiddenLoss < sc(15000)) return;
+    if(!hiddenLoss || hiddenLoss < 82500) return;
     var player = this.player;
     var sabirLvl = player.skillLevel('sabir');
     var mitigation = clamp(sabirLvl*0.03, 0, 0.3);
@@ -233,7 +266,7 @@ export var Game = {
     if(recovered>0) item.trueValue += recovered;
     this.addLog('Kazık yedin! ' + item.title + ' üzerinde ' + fmt(hiddenLoss) + ' değerinde gizli arıza çıktı' + (recovered>0 ? ' (Sabır sayesinde ' + fmt(recovered) + ' telafi edildi)' : '') + '.', 'neg');
     toast('Kazık yedin! Gizli arıza ortaya çıktı.');
-    player.addXp('sabir', clamp(Math.round(hiddenLoss/sc(900)), 6, 35));
+    player.addXp('sabir', clamp(Math.round(hiddenLoss/4950), 6, 35));
   },
 
   askQuestion: function(id, key){
@@ -243,7 +276,7 @@ export var Game = {
     var qList = item.category==='araba' ? CAR_QUESTIONS : ARSA_QUESTIONS;
     var q = qList.find(function(x){return x.key===key;});
     if(!q) return;
-    item.messages.push({from:'me', text:q.text});
+    item.messages.push(this.stampMsg({from:'me', text:q.text}));
 
     var reply;
     if(key==='fiyat'){
@@ -281,7 +314,7 @@ export var Game = {
         }
       }
     }
-    item.messages.push({from:'seller', text:reply});
+    item.messages.push(this.stampMsg({from:'seller', text:reply}));
     this.render();
   },
 
@@ -459,7 +492,7 @@ export var Game = {
     var offer = item.pendingOffer;
     if(!accept){
       item.pendingOffer = null;
-      item.messages.push({from:'seller', text:'Tamam, o zaman şimdilik ' + fmt(item.listedPrice) + ' fiyatta bekliyorum.'});
+      item.messages.push(this.stampMsg({from:'seller', text:'Tamam, o zaman şimdilik ' + fmt(item.listedPrice) + ' fiyatta bekliyorum.'}));
       this.addLog(offer.buyerName + '\'in teklifi reddedildi: ' + fmt(offer.offerPrice), '');
       this.render();
       return;
@@ -548,7 +581,7 @@ export var Game = {
 
   doBuyPart: function(brand, tag){
     var self = this, state = this.state, player = this.player;
-    var m = state.partsMarket.find(function(p){return p.brand===brand && p.tag===tag;});
+    var m = state.partsMarket.find(function(p){return p.brand===brand && p.tag===tag && p.city===player.currentCity;});
     if(!m) return;
     var desc = TransactionManager.buyPart(player, brand, m);
     this.perform(desc, function(){
@@ -781,7 +814,7 @@ export var Game = {
             var offerPrice = Math.round(item.listedPrice * (0.78 + Math.random()*0.14));
             item.pendingOffer = { buyerName: buyerName, offerPrice: offerPrice };
             var line = pick(BUYER_DISCOUNT_LINES).replace('{offer}', fmt(offerPrice));
-            item.messages.push({ from:'seller', text: buyerName + ': "Merhaba, ' + line + '."' });
+            item.messages.push(self.stampMsg({ from:'seller', text: buyerName + ': "Merhaba, ' + line + '."' }));
             self.addLog(buyerName + ' indirim istedi: ' + item.title + ' için ' + fmt(offerPrice), '');
             toast(buyerName + ' senden indirim istiyor — Mesajlar sekmesine bak.');
           }
@@ -796,8 +829,8 @@ export var Game = {
   }
 };
 
-var TENANT_FIX_COST = sc(3000);
-var TENANT_GLASS_COST = sc(2500);
+var TENANT_FIX_COST = 16500;
+var TENANT_GLASS_COST = 13750;
 export var TENANT_REQUESTS = [
   { text:"Kira çok yüksek, biraz indirim rica ediyorum.",
     onAccept:function(shop){ shop.tenant.rent = Math.round(shop.tenant.rent*0.9); shop.tenant.satisfaction = clamp(shop.tenant.satisfaction+15,0,100); },

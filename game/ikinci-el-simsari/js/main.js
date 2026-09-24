@@ -9,11 +9,12 @@ import { DukkanlarView } from './views/DukkanlarView.js';
 import { MesajlarView } from './views/MesajlarView.js';
 import { ProfilView } from './views/ProfilView.js';
 import { ControlPanelView } from './views/ControlPanelView.js';
+import { MapView } from './views/MapView.js';
 
 // =====================================================================
 //  ANA GİRİŞ — sekmeleri görünümlere yönlendirir, alt barı yönetir
 // =====================================================================
-var PANEL_CHILD_TABS = ['ustalar','dukkanlar','profil'];
+var PANEL_CHILD_TABS = ['ustalar','dukkanlar','profil','harita'];
 
 function render(){
   HeaderView.update();
@@ -32,6 +33,7 @@ function render(){
   else if(tab==='ustalar') UstalarView.render(main);
   else if(tab==='dukkanlar') DukkanlarView.render(main);
   else if(tab==='profil') ProfilView.render(main);
+  else if(tab==='harita') MapView.render(main);
 
   var activeNavTab = PANEL_CHILD_TABS.indexOf(tab) >= 0 ? 'panel' : tab;
   document.querySelectorAll('#bottombar button').forEach(function(b){
@@ -57,6 +59,7 @@ document.querySelectorAll('#bottombar button').forEach(function(b){
     Game.state.openShopId = null;
     Game.state.openDetailId = null;
     Game.state.openMessageThreadItemId = null;
+    Game.state.sbmThreadOpen = false;
     render();
   };
 });

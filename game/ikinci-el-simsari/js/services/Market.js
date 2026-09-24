@@ -6,7 +6,8 @@ import {
   PARTS_CATALOG, CAR_PART_DEFS, PART_STATUS,
   SELLER_REASONS_CAR, SELLER_USAGE_CAR, SELLER_CLOSING_CAR,
   SELLER_REASONS_ARSA, SELLER_CLOSING_ARSA, SELLER_REASONS_DUKKAN,
-  PRICE_SCALE, DEAL_CHANCE, DEAL_DISCOUNT_MIN, DEAL_DISCOUNT_MAX
+  DEAL_CHANCE, DEAL_DISCOUNT_MIN, DEAL_DISCOUNT_MAX,
+  PARTS_CITY_VARIANCE_MIN, PARTS_CITY_VARIANCE_MAX
 } from '../data/constants.js';
 
 // =====================================================================
@@ -75,11 +76,11 @@ export var Market = {
       faults.push({ tag:HEAVY_FAULT.tag, label:HEAVY_FAULT.label, loss:rnd(HEAVY_FAULT.loss[0],HEAVY_FAULT.loss[1]), repairCost:rnd(HEAVY_FAULT.repair[0],HEAVY_FAULT.repair[1]), fixed:false, heavy:true, hidden:true });
     }
     var yearFactor = 0.55 + (year-2011) * 0.045;
-    var baseValue = Math.round(rnd(170000,260000) * PRICE_SCALE * yearFactor);
+    var baseValue = Math.round(rnd(935000,1430000) * yearFactor);
     var totalLoss = faults.reduce(function(s,f){return s+f.loss;},0);
     var askingBase = baseValue - totalLoss;
     var noise = 0.85 + Math.random()*0.35;
-    var askingPrice = Math.max(Math.round(30000*PRICE_SCALE), Math.round(askingBase*noise));
+    var askingPrice = Math.max(165000, Math.round(askingBase*noise));
 
     var carDef = pick(CAR_MODELS);
     return new Car({
@@ -97,7 +98,7 @@ export var Market = {
 
   makeArsa: function(){
     var m2 = rnd(150, 2500);
-    var pricePerM2 = rnd(400, 2600) * PRICE_SCALE;
+    var pricePerM2 = rnd(2200, 14300);
     var baseValue = Math.round(m2*pricePerM2);
     var issueCount = Math.random() < 0.35 ? 0 : rnd(1,3);
     var pool = ARSA_ISSUES_POOL.slice();
@@ -110,7 +111,7 @@ export var Market = {
     var totalLoss = issues.reduce(function(s,f){return s+f.loss;},0);
     var askingBase = baseValue - totalLoss;
     var noise = 0.85 + Math.random()*0.35;
-    var askingPrice = Math.max(Math.round(20000*PRICE_SCALE), Math.round(askingBase*noise));
+    var askingPrice = Math.max(110000, Math.round(askingBase*noise));
     var reason = pick(SELLER_REASONS_ARSA);
     var extra = pick(ARSA_AD_PHRASES);
     var closing = pick(SELLER_CLOSING_ARSA);
@@ -164,15 +165,20 @@ export var Market = {
 
   // Parçalar her gün yeniden dağıtılır ve bir kısmı o gün stokta
   // bulunmayabilir (tedarikçi kıtlığı) — UstalarView bunu "Stokta yok"
-  // olarak gösterir.
+  // olarak gösterir. Artık her şehirde ayrı bir parçacı var; aynı parça
+  // şehirden şehire (parçacıdan parçacıya) farklı fiyata satılır.
   refreshPartsMarket: function(){
     var market = [];
-    CAR_MODELS.forEach(function(m){
-      PARTS_CATALOG.forEach(function(p){
-        if(Math.random() < 0.28) return; // stokta yok
-        market.push({
-          brand: m.brand, tag: p.tag, name: p.name,
-          price: Math.round(p.basePrice * m.mult * (0.8 + Math.random()*0.5))
+    CITIES.forEach(function(city){
+      // şehrin parçacısının o günkü genel fiyat eğilimi (ucuz/pahalı esnaf)
+      var cityFactor = PARTS_CITY_VARIANCE_MIN + Math.random()*(PARTS_CITY_VARIANCE_MAX-PARTS_CITY_VARIANCE_MIN);
+      CAR_MODELS.forEach(function(m){
+        PARTS_CATALOG.forEach(function(p){
+          if(Math.random() < 0.28) return; // stokta yok
+          market.push({
+            city: city, brand: m.brand, tag: p.tag, name: p.name,
+            price: Math.round(p.basePrice * m.mult * cityFactor * (0.9 + Math.random()*0.25))
+          });
         });
       });
     });

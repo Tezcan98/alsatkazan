@@ -2,14 +2,8 @@
 //  VERİ TANIMLARI (sabit havuzlar)
 // =====================================================================
 
-// Türkiye piyasasına yakın olması için tüm baz fiyatlar bu çarpanla
-// ölçekleniyor — kaynak sayılar okunabilir kalsın diye "gerçekçi 2020
-// öncesi" seviyede yazılıp sc()/scR() ile büyütülüyor. Dengeyi değiştirmek
-// için tek yapılması gereken PRICE_SCALE'i güncellemek.
-export const PRICE_SCALE = 5.5;
-function sc(n){ return Math.round(n*PRICE_SCALE); }
-function scR(r){ return [sc(r[0]), sc(r[1])]; }
-
+// Tüm fiyatlar artık doğrudan gerçekçi 2026 Türkiye piyasası seviyesinde
+// sabit sayılar olarak yazılıyor — genel bir "ölçek/oran" kavramı yok.
 export const CAR_MODELS = [
   {brand:"Volkswagen", model:"Golf 1.6", mult:1.30},
   {brand:"Renault", model:"Megane 1.5 dCi", mult:0.95},
@@ -30,6 +24,21 @@ export const CAR_MODELS = [
 ];
 export const COLORS = ["Beyaz","Gri","Siyah","Kırmızı","Lacivert","Gümüş","Bej","Yeşil"];
 export const CITIES = ["İstanbul","Ankara","İzmir","Bursa","Kocaeli","Antalya","Gaziantep","Konya","Eskişehir","Mersin"];
+// Harita ekranı için basitleştirilmiş (şematik) şehir konumları —
+// gerçek coğrafi hassasiyet hedeflenmez, sadece tanınabilir bir düzen.
+// viewBox 0 0 400 200 üzerinde x/y konumları.
+export const CITY_COORDS = {
+  "İstanbul": {x:63, y:30},
+  "Ankara": {x:143, y:63},
+  "İzmir": {x:23, y:108},
+  "Bursa": {x:65, y:54},
+  "Kocaeli": {x:82, y:36},
+  "Antalya": {x:99, y:153},
+  "Gaziantep": {x:240, y:147},
+  "Konya": {x:137, y:123},
+  "Eskişehir": {x:95, y:66},
+  "Mersin": {x:181, y:156}
+};
 export const TRANS = ["Manuel","Otomatik"];
 export const FUEL = ["Benzin","Dizel","LPG'li Benzin","Hibrit"];
 export const BODY = ["Sedan","Hatchback","SUV","Station Wagon"];
@@ -37,17 +46,17 @@ export const BODY = ["Sedan","Hatchback","SUV","Station Wagon"];
 // Mekanik/elektrik arızaları — boya/değişen parça durumu artık ayrı
 // bir sistemle (CAR_PART_DEFS + boya/değişen şeması) yönetiliyor.
 export const FAULT_POOL_CAR = [
-  {tag:"motor", label:"Motor arızası", loss:scR([35000,70000]), repair:scR([15000,28000])},
-  {tag:"motor", label:"Şanzıman sorunu", loss:scR([25000,55000]), repair:scR([12000,24000])},
-  {tag:"motor", label:"Turbo arızası", loss:scR([20000,40000]), repair:scR([10000,20000])},
-  {tag:"diger", label:"Lastik değişimi gerekiyor", loss:scR([6000,12000]), repair:scR([5000,9000])},
-  {tag:"diger", label:"Fren balatası bitmiş", loss:scR([4000,9000]), repair:scR([2500,5000])},
-  {tag:"diger", label:"Klima çalışmıyor", loss:scR([5000,11000]), repair:scR([3000,7000])},
-  {tag:"diger", label:"Elektrik aksamında arıza", loss:scR([7000,15000]), repair:scR([4000,9000])},
-  {tag:"diger", label:"Cam/ayna kırık", loss:scR([3000,7000]), repair:scR([1500,3500])},
-  {tag:"diger", label:"Akü ve şarj sistemi zayıf", loss:scR([2500,6000]), repair:scR([1500,3000])}
+  {tag:"motor", label:"Motor arızası", loss:[192500,385000], repair:[82500,154000]},
+  {tag:"motor", label:"Şanzıman sorunu", loss:[137500,302500], repair:[66000,132000]},
+  {tag:"motor", label:"Turbo arızası", loss:[110000,220000], repair:[55000,110000]},
+  {tag:"diger", label:"Lastik değişimi gerekiyor", loss:[33000,66000], repair:[27500,49500]},
+  {tag:"diger", label:"Fren balatası bitmiş", loss:[22000,49500], repair:[13750,27500]},
+  {tag:"diger", label:"Klima çalışmıyor", loss:[27500,60500], repair:[16500,38500]},
+  {tag:"diger", label:"Elektrik aksamında arıza", loss:[38500,82500], repair:[22000,49500]},
+  {tag:"diger", label:"Cam/ayna kırık", loss:[16500,38500], repair:[8250,19250]},
+  {tag:"diger", label:"Akü ve şarj sistemi zayıf", loss:[13750,33000], repair:[8250,16500]}
 ];
-export const HEAVY_FAULT = {tag:"hasar", label:"Ağır hasar kaydı (şasi/kaporta)", loss:scR([45000,90000]), repair:scR([25000,50000]), heavy:true};
+export const HEAVY_FAULT = {tag:"hasar", label:"Ağır hasar kaydı (şasi/kaporta)", loss:[247500,495000], repair:[137500,275000], heavy:true};
 
 // ---- sahibinden.com tarzı boya/değişen parça şeması ----
 // Her araç için 11 kaporta parçasının durumu (orijinal / boyalı / değişen)
@@ -66,9 +75,9 @@ export const CAR_PART_DEFS = [
   {key:"sag-arka-kapi", label:"Sağ Arka Kapı"}
 ];
 export const PART_STATUS = {
-  orijinal: {label:"Orijinal", color:"#9aa4ad"},
-  boyali: {label:"Boyalı", color:"#e0980a", loss:scR([3000,7000]), repair:scR([2500,5500])},
-  degisen: {label:"Değişen", color:"#c62828", loss:scR([6000,13000]), repair:scR([4500,9500])}
+  orijinal: {label:"Orijinal", color:"#c7ccd1"},
+  boyali: {label:"Boyalı", color:"#2f6fd6", loss:[16500,38500], repair:[13750,30250]},
+  degisen: {label:"Değişen", color:"#d64545", loss:[33000,71500], repair:[24750,52250]}
 };
 
 export const CAR_AD_PHRASES = [
@@ -116,12 +125,12 @@ export const SELLER_CLOSING_CAR = [
 
 export const ARSA_IMAR = ["Konut İmarlı","Ticari İmarlı","Tarla","Bağ-Bahçe","Sanayi İmarlı"];
 export const ARSA_ISSUES_POOL = [
-  {tag:"tapu", label:"Tapuda ipotek kaydı var", loss:scR([15000,35000])},
-  {tag:"tapu", label:"Haciz şerhi var", loss:scR([20000,45000])},
-  {tag:"yol", label:"Yola cephesi yok", loss:scR([10000,25000])},
-  {tag:"imar", label:"İmar durumu belirsiz / ihtilaflı", loss:scR([12000,30000])},
-  {tag:"tapu", label:"Hisseli tapu (ortaklı)", loss:scR([18000,32000])},
-  {tag:"imar", label:"Deprem riski / zemin etüdü sorunlu", loss:scR([15000,28000])}
+  {tag:"tapu", label:"Tapuda ipotek kaydı var", loss:[82500,192500]},
+  {tag:"tapu", label:"Haciz şerhi var", loss:[110000,247500]},
+  {tag:"yol", label:"Yola cephesi yok", loss:[55000,137500]},
+  {tag:"imar", label:"İmar durumu belirsiz / ihtilaflı", loss:[66000,165000]},
+  {tag:"tapu", label:"Hisseli tapu (ortaklı)", loss:[99000,176000]},
+  {tag:"imar", label:"Deprem riski / zemin etüdü sorunlu", loss:[82500,154000]}
 ];
 export const ARSA_AD_PHRASES = [
   "Yatırımlık, hızla değerlenen bölgede.",
@@ -148,8 +157,8 @@ export const SELLER_CLOSING_ARSA = [
 ];
 
 export const SHOP_TYPES = [
-  {type:"galeri", title:"Oto Galerisi", accepts:"araba", capacity:[2,4], rent:scR([3000,8000]), price:scR([90000,230000])},
-  {type:"emlak", title:"Emlak Ofisi", accepts:"arsa", capacity:[2,3], rent:scR([2500,6000]), price:scR([60000,180000])}
+  {type:"galeri", title:"Oto Galerisi", accepts:"araba", capacity:[2,4], rent:[16500,44000], price:[495000,1265000]},
+  {type:"emlak", title:"Emlak Ofisi", accepts:"arsa", capacity:[2,3], rent:[13750,33000], price:[330000,990000]}
 ];
 export const DUKKAN_AD_PHRASES = [
   "Demirbaşlarıyla birlikte devren satılıktır.",
@@ -184,10 +193,10 @@ export const AMBIENT_EVENTS = [
 ];
 
 export const PARTS_CATALOG = [
-  {tag:"motor", name:"Motor / Şanzıman Parçası", basePrice:sc(8000)},
-  {tag:"boya", name:"Kaporta / Boya Malzemesi", basePrice:sc(2500)},
-  {tag:"diger", name:"Lastik / Fren / Klima Sarfı", basePrice:sc(1800)},
-  {tag:"hasar", name:"Ağır Hasar Onarım Seti", basePrice:sc(15000)}
+  {tag:"motor", name:"Motor / Şanzıman Parçası", basePrice:9000},
+  {tag:"boya", name:"Kaporta / Boya Malzemesi", basePrice:1800},
+  {tag:"diger", name:"Lastik / Fren / Klima Sarfı", basePrice:1100},
+  {tag:"hasar", name:"Ağır Hasar Onarım Seti", basePrice:7000}
 ];
 export const SKILL_LABELS = { tamir:"Tamir Ustalığı", pazarlik:"Pazarlık Ustalığı", ekspertiz:"Ekspertiz Gözü", isletme:"İşletmecilik", sabir:"Sabır" };
 export const SKILL_XP_PER_LEVEL = 120;
@@ -201,11 +210,11 @@ export const BUYER_DISCOUNT_LINES = [
 ];
 
 export const MASRAF_OPTIONS = [
-  {id:"tadilat", name:"Tadilat / Yenileme", desc:"Vitrin kapasitesini kalıcı olarak +1 artırır.", cost:sc(15000)},
-  {id:"reklam", name:"Reklam Panosu", desc:"Vitrindeki ürünlerin günlük kendiliğinden satılma şansını artırır.", cost:sc(5000)},
-  {id:"demirbas", name:"Demirbaş Yenileme", desc:"Aylık kirayı kalıcı olarak %10 azaltır.", cost:sc(8000)},
-  {id:"sigorta", name:"İşyeri Sigortası", desc:"Kiracı memnuniyet düşüşlerini yavaşlatır.", cost:sc(6000)},
-  {id:"egitim", name:"Personel Eğitimi", desc:"Vitrindeki ürünlerin satış fiyatını biraz artırır.", cost:sc(10000)}
+  {id:"tadilat", name:"Tadilat / Yenileme", desc:"Vitrin kapasitesini kalıcı olarak +1 artırır.", cost:80000},
+  {id:"reklam", name:"Reklam Panosu", desc:"Vitrindeki ürünlerin günlük kendiliğinden satılma şansını artırır.", cost:25000},
+  {id:"demirbas", name:"Demirbaş Yenileme", desc:"Aylık kirayı kalıcı olarak %10 azaltır.", cost:40000},
+  {id:"sigorta", name:"İşyeri Sigortası", desc:"Kiracı memnuniyet düşüşlerini yavaşlatır.", cost:30000},
+  {id:"egitim", name:"Personel Eğitimi", desc:"Vitrindeki ürünlerin satış fiyatını biraz artırır.", cost:50000}
 ];
 export const TENANT_NAMES = ["Mehmet Usta","Ayşe Hanım","Kemal Bey","Fatma Hanım","Serkan Bey","Elif Hanım","Murat Bey","Zeynep Hanım","Hakan Bey","Derya Hanım"];
 export const TENANT_BUSINESS_ARABA = ["Oto Yedek Parça Satışı","İkinci El Oto Alım Satım","Araç Kiralama Ofisi","Oto Yıkama ve Detaylı Bakım"];
@@ -234,7 +243,7 @@ export const USTALAR = [
 // Sahip olunan arsaya inşaat başlatılabilir; maliyet m²'ye göre hesaplanır,
 // inşaat gün geçişleriyle ilerler ve bittiğinde arsanın değerini belirgin
 // biçimde artırır (yatırım getirisi mantığı).
-export const CONSTRUCTION_COST_PER_M2 = sc(3500);
+export const CONSTRUCTION_COST_PER_M2 = 18000;
 export const CONSTRUCTION_DAYS_MIN = 4;
 export const CONSTRUCTION_DAYS_MAX = 7;
 export const CONSTRUCTION_VALUE_MULT = 1.7; // inşaat bitince eklenen değer = maliyet × bu çarpan
@@ -243,8 +252,8 @@ export const CONSTRUCTION_VALUE_MULT = 1.7; // inşaat bitince eklenen değer = 
 // Garajda bekleyen araç/arsa bedava durmuyor: her gün küçük bir sigorta/
 // vergi masrafı çıkar, uzun süre satılmayan ürünler de yavaşça değer
 // kaybeder — elinde tutmanın da bir bedeli olsun diye.
-export const CAR_DAILY_HOLDING_COST = sc(120);
-export const ARSA_DAILY_HOLDING_COST = sc(25);
+export const CAR_DAILY_HOLDING_COST = 150;
+export const ARSA_DAILY_HOLDING_COST = 40;
 export const STALE_LISTING_DAYS = 10; // bu günden sonra değer kaybı başlar
 export const STALE_DEPRECIATION_RATE = 0.004; // günlük ~%0.4
 
@@ -264,8 +273,8 @@ export const DEAL_DISCOUNT_MAX = 0.34;
 // gibi her kaza sigortaya bildirilmez, bu yüzden ağır hasar kayıtlarının
 // bir kısmı TRAMER sorgusunda görünmeyebilir (TRAMER_MISS_CHANCE).
 export const INSPECT_MISS_CHANCE = 0.16;
-export const EKSPERTIZ_BASE_COST = sc(8000);
-export const TRAMER_COST = sc(2000);
+export const EKSPERTIZ_BASE_COST = 3500;
+export const TRAMER_COST = 300;
 export const TRAMER_MISS_CHANCE = 0.30;
 
 // SBM'nin TRAMER sorgu sonucunda gönderdiği SMS'teki kaza tipi kodları.
@@ -281,7 +290,7 @@ export const TRAMER_KAZA_TYPES = [
 // ---- İlan Doping (Öne Çıkar) ----
 // sahibinden.com'un imza özelliği: ücret karşılığında kendi ilanını öne
 // çıkarıp alıcı ilgisini geçici olarak artırırsın.
-export const BOOST_COST = sc(4000);
+export const BOOST_COST = 1500;
 export const BOOST_DAYS = 5;
 export const BOOST_ATTRACT_BONUS = 0.18;
 
@@ -289,11 +298,24 @@ export const BOOST_ATTRACT_BONUS = 0.18;
 // Sahip olunan araçlar için isteğe bağlı sigorta: günlük küçük bir prim
 // karşılığında kaza/kazık zararının büyük kısmını karşılar.
 export const KASKO_DAILY_RATE = 0.00045; // aracın güncel değerinin günlük oranı
-export const KASKO_MIN_DAILY = sc(35);
-export const KASKO_DEDUCTIBLE = sc(1800); // muafiyet — sigortalıyken kazada sadece bu ödenir
+export const KASKO_MIN_DAILY = 150;
+export const KASKO_DEDUCTIBLE = 8000; // muafiyet — sigortalıyken kazada sadece bu ödenir
 export const KAZA_DAILY_CHANCE = 0.012;
 
 // ---- İtibar (Satıcı Puanı) ----
 // sahibinden'deki satıcı puanı gibi — satış geçmişine göre yıldız
 // hesaplanır, alıcı ilgisini ve pazarlık sonuçlarını hafifçe etkiler.
 export const REPUTATION_MAX_STARS = 5;
+
+// ---- Harita / Seyahat ----
+// Şehirler arası mesafe, CITY_COORDS üzerindeki basit Öklid uzaklığıdır.
+// Maliyet ve süre bu mesafeyle orantılı olarak hesaplanır.
+export const TRAVEL_COST_PER_UNIT = 1200;
+export const TRAVEL_MIN_COST = 5000;
+export const TRAVEL_HOURS_PER_UNIT = 0.07;
+
+// ---- Yedek Parçacı fiyat farkı ----
+// Her şehirdeki parçacının kendi (gün başına sabit) fiyat çarpanı vardır —
+// aynı parça farklı şehirlerde farklı fiyata satılır.
+export const PARTS_CITY_VARIANCE_MIN = 0.82;
+export const PARTS_CITY_VARIANCE_MAX = 1.28;

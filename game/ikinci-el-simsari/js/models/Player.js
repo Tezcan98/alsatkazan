@@ -15,6 +15,8 @@ export function Player(){
   this.arsaSold = 0;
   this.dukkanSold = 0;
   this.achievements = [];
+  // Harita / seyahat sistemi: oyuncunun şu anki şehri (bkz. Game.doTravel)
+  this.currentCity = 'İstanbul';
 }
 Player.prototype.skillLevel = function(key){
   return clamp(1 + Math.floor(this.skills[key]/SKILL_XP_PER_LEVEL), 1, 10);

@@ -2,7 +2,8 @@ import { clamp, fmt } from '../utils.js';
 import {
   SKILL_XP_PER_LEVEL, CONSTRUCTION_COST_PER_M2,
   INSPECT_MISS_CHANCE, EKSPERTIZ_BASE_COST, TRAMER_COST, TRAMER_MISS_CHANCE,
-  BOOST_COST, BOOST_DAYS, KASKO_DAILY_RATE, KASKO_MIN_DAILY
+  BOOST_COST, BOOST_DAYS, KASKO_DAILY_RATE, KASKO_MIN_DAILY,
+  TRAVEL_COST_PER_UNIT, TRAVEL_MIN_COST, TRAVEL_HOURS_PER_UNIT
 } from '../data/constants.js';
 
 // =====================================================================
@@ -291,6 +292,23 @@ export var TransactionManager = {
       riskLabel:'Geri dönüşü yoktur.',
       confirmLabel:'Tahliye Et',
       danger:true
+    };
+  },
+
+  // --- Şehirler arası seyahat (Harita ekranı) ---
+  travel: function(player, fromCity, toCity, distance){
+    var cost = Math.max(TRAVEL_MIN_COST, Math.round(distance * TRAVEL_COST_PER_UNIT));
+    var hours = Math.max(0.3, distance * TRAVEL_HOURS_PER_UNIT);
+    return {
+      type:'TRAVEL',
+      title:'Şehre Git',
+      message: fromCity + ' şehrinden ' + toCity + ' şehrine yolculuk yapılacak.',
+      cost: cost,
+      durationMs: this.hoursToRealMs(hours),
+      durationLabel: this.hoursLabel(hours),
+      riskLabel:'Risksiz — vardığında o şehrin parçacısına ve fiyatlarına erişirsin.',
+      confirmLabel:'Yola Çık',
+      phases:['Bilet/yakıt ayarlanıyor…','Yolda…',toCity + '\'e varıldı…']
     };
   },
 

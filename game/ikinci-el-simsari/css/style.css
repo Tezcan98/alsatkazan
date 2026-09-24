@@ -199,6 +199,9 @@ h2.section .count{ font-size:0.72rem; color:var(--ink-faint); font-weight:normal
 .sbm-wrap{ max-width:88%; margin-right:auto; margin-bottom:8px; }
 .sbm-label{ font-size:0.68rem; font-weight:800; color:var(--ink-soft); letter-spacing:0.4px; margin:0 0 3px 2px; }
 .bubble.sbm{ background:#eef3ea; border:1px solid #cfe0c8; color:#28331f; border-bottom-left-radius:2px; margin-bottom:0; max-width:100%; }
+.sbm-thumb{ display:flex; align-items:center; justify-content:center; background:var(--navy); color:#fff; font-size:0.66rem; font-weight:800; letter-spacing:0.3px; }
+.sbm-group-kicker{ font-size:0.68rem; font-weight:700; color:var(--ink-faint); margin:14px 0 4px 2px; text-transform:uppercase; letter-spacing:0.3px; }
+.sbm-group-kicker:first-child{ margin-top:0; }
 
 /* ---- garaj / ustalar / defter kartları ---- */
 .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:11px; }
@@ -260,6 +263,11 @@ h2.section .count{ font-size:0.72rem; color:var(--ink-faint); font-weight:normal
 .avatar{ width:48px; height:48px; border-radius:50%; object-fit:cover; border:2px solid var(--orange); }
 .skillbar{ background:var(--border-soft); border-radius:3px; height:6px; overflow:hidden; }
 .skillbar-fill{ background:var(--orange); height:100%; }
+
+/* ---- harita ---- */
+.map-svg{ width:100%; height:auto; display:block; }
+.map-city text{ pointer-events:none; }
+.map-city:not(.here):hover circle{ stroke:var(--orange-dark); stroke-width:2.5; }
 
 /* ---- alt bar ---- */
 nav.bottombar{
