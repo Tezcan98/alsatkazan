@@ -80,15 +80,14 @@ function drawMarkers(svg, opts){
   var layer=el('g', {'class':'map-overlay-layer'});
   var here=points[currentCity];
 
-  // Mevcut şehirden oyun içinde kullanılan şehirlere rota çizgileri.
-  if(here){
-    CITIES.forEach(function(city){
-      if(city===currentCity || !points[city]) return;
-      layer.appendChild(el('line',{
-        x1:here.x,y1:here.y,x2:points[city].x,y2:points[city].y,
-        stroke:'#9aa6b2','stroke-width':'2','stroke-dasharray':'7 7','opacity':'.7'
-      }));
-    });
+  // Sadece seçilen hedefe rota çizilir; böylece harita "buradan nereye?"
+  // sorusunu tek bakışta cevaplar.
+  if(here && opts.targetCity && points[opts.targetCity] && opts.targetCity!==currentCity){
+    var targetPoint=points[opts.targetCity];
+    layer.appendChild(el('line',{
+      x1:here.x,y1:here.y,x2:targetPoint.x,y2:targetPoint.y,
+      stroke:'#d19a00','stroke-width':'3','stroke-dasharray':'8 6','opacity':'.9'
+    }));
   }
 
   CITIES.forEach(function(city){
@@ -97,14 +96,33 @@ function drawMarkers(svg, opts){
     var isHere=city===currentCity;
     var clickable=!isHere && typeof opts.onCityClick==='function';
     var g=el('g',{'class':'map-city-real','style':'cursor:'+(clickable?'pointer':'default')});
+    if(isHere){
+      // Oyuncunun konumu diğer şehirlerden net biçimde ayrılır:
+      // dış halka + merkez nokta + "BURADASIN" etiketi.
+      g.appendChild(el('circle',{
+        cx:p.x,cy:p.y,r:16,fill:'none',stroke:'#e0a800',
+        'stroke-width':'2.5','stroke-dasharray':'3 3','opacity':'.95'
+      }));
+    }
     var dot=el('circle',{
-      cx:p.x,cy:p.y,r:isHere?10:7,
+      cx:p.x,cy:p.y,r:isHere?9:7,
       fill:isHere?'#ffd200':'#243447',
-      stroke:isHere?'#c99700':'#ffffff','stroke-width':'3'
+      stroke:isHere?'#8a6500':'#ffffff','stroke-width':isHere?'3.5':'3'
     });
     g.appendChild(dot);
+
+    if(isHere){
+      var hereLabel=el('text',{
+        x:p.x,y:p.y-24,'text-anchor':'middle',
+        'font-size':'9','font-weight':'900',
+        fill:'#8a6500','paint-order':'stroke','stroke':'#fff','stroke-width':'3.5','stroke-linejoin':'round'
+      });
+      hereLabel.textContent='BURADASIN';
+      g.appendChild(hereLabel);
+    }
+
     var label=el('text',{
-      x:p.x,y:p.y-(isHere?15:12),'text-anchor':'middle',
+      x:p.x,y:p.y-(isHere?11:12),'text-anchor':'middle',
       'font-size':isHere?'15':'13','font-weight':isHere?'800':'700',
       fill:'#18232d','paint-order':'stroke','stroke':'#fff','stroke-width':'4','stroke-linejoin':'round'
     });
