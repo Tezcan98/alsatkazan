@@ -120,6 +120,19 @@ export var TransactionManager = {
     };
   },
 
+  // --- Dükkan kiralama ---
+  rentShop: function(player, shop){
+    var hours = 1;
+    return {
+      type:'RENT_SHOP', title:'Dükkan Kirala',
+      message: shop.title + ' için kira sözleşmesi yapılacak. İlk aylık kira peşin ödenecek.',
+      cost: Math.round(shop.rent * shop.rentMult),
+      durationMs: this.hoursToRealMs(hours), durationLabel:this.hoursLabel(hours) + ' (kira sözleşmesi)',
+      riskLabel:'Kiralanan dükkanın mülkiyeti sende değildir; aylık kira ödemesi devam eder.',
+      confirmLabel:'Kirala', phases:['Kira sözleşmesi hazırlanıyor…','Depozito/kira işleniyor…','Anahtar teslim ediliyor…']
+    };
+  },
+
   // --- Garajdan / vitrinden satış ---
   sale: function(player, item, viaShop){
     var lvl = this.skillLevel(player.skills[viaShop?'isletme':'pazarlik']);
