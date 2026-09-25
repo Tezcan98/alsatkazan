@@ -1,30 +1,19 @@
 import { CITIES, CITY_COORDS } from '../data/constants.js';
 
-// =====================================================================
-//  HARİTA ÇİZİCİ (paylaşılan) — gerçek Türkiye ana hatlı harita SVG'si
-// =====================================================================
-// MapView (Harita/Seyahat sekmesi) ile ListingsView'daki (İlanlar) Liste/
-// Harita geçişi AYNI çizim mantığını kullanır — SVG üretimi burada tek
-// yerde, iki görünüm de kendi tıklama davranışını opts ile geçer.
-// CITY_COORDS ve TURKEY_PATH aynı basit enlem/boylam -> (x,y) dönüşümüyle
-// üretildi (lon 26-45°D, lat 36-42°K aralığı, x=(lon-26)*16+5,
-// y=5+(42-lat)*30), böylece şehirler ana hat içinde gerçekçi göreli
-// konumlarında durur.
 var SVG_NS = 'http://www.w3.org/2000/svg';
+var REAL_MAP_URL = 'https://raw.githubusercontent.com/dnomak/svg-turkiye-haritasi/master/index.html';
+var realMapPromise = null;
+
 export function el(tag, attrs){
   var n = document.createElementNS(SVG_NS, tag);
   Object.keys(attrs).forEach(function(k){ n.setAttribute(k, attrs[k]); });
   return n;
 }
 
-export var TURKEY_PATH = 'M29.0,5.0 L37.0,8.0 L53.0,6.5 L85.0,12.5 L117.0,17.0 L149.0,26.0 L181.0,32.0 ' +
-  'L213.0,33.5 L253.0,20.0 L277.0,20.0 L285.0,35.0 L301.0,65.0 L305.8,74.0 L297.8,83.0 L305.8,116.0 ' +
-  'L293.0,146.0 L269.0,146.0 L249.8,155.0 L249.8,158.0 L197.0,164.0 L176.2,167.0 L168.2,185.0 ' +
-  'L167.4,186.5 L161.8,182.0 L142.6,179.0 L117.0,179.0 L80.2,167.0 L53.0,176.0 L27.4,167.0 L21.0,155.0 ' +
-  'L16.2,131.0 L21.0,113.0 L14.6,95.0 L19.4,80.0 L21.0,65.0 L17.8,53.0 L9.8,38.0 L19.4,29.0 Z';
+// Yedek çizim: uzak SVG kaynağına erişilemezse oyun yine çalışır.
+export var TURKEY_PATH = 'M29,5 L37,8 L53,6.5 L85,12.5 L117,17 L149,26 L181,32 L213,33.5 L253,20 L277,20 L285,35 L301,65 L306,74 L298,83 L306,116 L293,146 L270,146 L250,158 L197,164 L176,167 L168,186 L143,179 L117,179 L80,167 L53,176 L27,167 L21,155 L16,131 L21,113 L15,95 L19,80 L21,65 L18,53 L10,38 L19,29 Z';
 export var VIEWBOX = '0 0 316 195';
 
-// listings dizisinden ({location}) şehir -> ilan listesi haritası üretir.
 export function groupByCity(listings){
   var byCity = {};
   listings.forEach(function(l){
@@ -34,88 +23,140 @@ export function groupByCity(listings){
   return byCity;
 }
 
-// container içine Türkiye ana hatlı SVG'yi çizer ve döndürür.
-// opts:
-//   currentCity      - vurgulanacak (sarı) şehir, genelde player.currentCity
-//   listings         - [] rozetler için ({location} alanı olan ürünler)
-//   onCityClick(city)   - verilirse, currentCity DIŞINDAKİ şehir noktaları
-//                         tıklanabilir olur (ör. seyahat hedefi seçmek için)
-//   cityTitleFn(city)   - verilirse, şehir noktasının SVG <title> (tooltip)
-//                         metnini özelleştirir
-//   onBadgeClick(city, cityListings) - verilirse, ilan-sayısı rozetleri
-//                         tıklanabilir olur (ör. o şehrin ilanlarını açmak)
-export function renderMap(container, opts){
-  opts = opts || {};
+function loadRealMap(){
+  if(realMapPromise) return realMapPromise;
+  realMapPromise = fetch(REAL_MAP_URL)
+    .then(function(r){ if(!r.ok) throw new Error('Turkey SVG alınamadı'); return r.text(); })
+    .then(function(html){
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      var svg = doc.querySelector('#svg-turkiye-haritasi');
+      if(!svg) throw new Error('Turkey SVG bulunamadı');
+      return svg;
+    })
+    .catch(function(){ return null; });
+  return realMapPromise;
+}
+
+function cityId(city){
+  var ids = {
+    'İstanbul':'istanbul','Ankara':'ankara','İzmir':'izmir','Bursa':'bursa',
+    'Kocaeli':'kocaeli','Antalya':'antalya','Gaziantep':'gaziantep',
+    'Konya':'konya','Eskişehir':'eskisehir','Mersin':'mersin'
+  };
+  return ids[city];
+}
+
+function centerOf(group){
+  var b = group.getBBox();
+  return {x:b.x+b.width/2, y:b.y+b.height/2};
+}
+
+function styleProvinceMap(svg){
+  svg.setAttribute('class','map-svg map-svg-real');
+  svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+  svg.querySelectorAll('#turkiye > g').forEach(function(g){
+    g.style.cursor = 'default';
+    g.querySelectorAll('path').forEach(function(p){
+      p.setAttribute('fill','#eef3ea');
+      p.setAttribute('stroke','#a8b6a3');
+      p.setAttribute('stroke-width','1');
+      p.style.transition='fill .15s,stroke .15s';
+    });
+  });
+}
+
+function drawMarkers(svg, opts){
   var listings = opts.listings || [];
   var currentCity = opts.currentCity;
   var byCity = groupByCity(listings);
+  var points = {};
 
-  var svg = el('svg', {viewBox: VIEWBOX, 'class':'map-svg'});
-  svg.appendChild(el('path', {d: TURKEY_PATH, fill:'#eef3ea', stroke:'#9db98f', 'stroke-width':'1.5', 'stroke-linejoin':'round'}));
+  CITIES.forEach(function(city){
+    var id=cityId(city), group=id ? svg.querySelector('#'+id) : null;
+    if(!group) return;
+    points[city]=centerOf(group);
+  });
 
-  var here = currentCity ? CITY_COORDS[currentCity] : null;
+  var layer=el('g', {'class':'map-overlay-layer'});
+  var here=points[currentCity];
+
+  // Mevcut şehirden oyun içinde kullanılan şehirlere rota çizgileri.
   if(here){
     CITIES.forEach(function(city){
-      if(city===currentCity) return;
-      var c = CITY_COORDS[city];
-      if(!c) return;
-      svg.appendChild(el('line', {
-        x1:here.x, y1:here.y, x2:c.x, y2:c.y,
-        stroke:'#c7cfd6', 'stroke-width':'1', 'stroke-dasharray':'3,3'
+      if(city===currentCity || !points[city]) return;
+      layer.appendChild(el('line',{
+        x1:here.x,y1:here.y,x2:points[city].x,y2:points[city].y,
+        stroke:'#9aa6b2','stroke-width':'2','stroke-dasharray':'7 7','opacity':'.7'
       }));
     });
   }
 
   CITIES.forEach(function(city){
-    var c = CITY_COORDS[city];
-    if(!c) return;
-    var isHere = city===currentCity;
-    var clickable = !isHere && typeof opts.onCityClick === 'function';
-    var g = el('g', {'class':'map-city' + (isHere ? ' here' : ''), style:'cursor:' + (clickable ? 'pointer' : 'default')});
-    var dot = el('circle', {
-      cx:c.x, cy:c.y, r: isHere ? 8 : 5.5,
-      fill: isHere ? '#ffd200' : '#243447',
-      stroke: isHere ? '#e0ab00' : '#0053a0', 'stroke-width':'1.5'
+    var p=points[city];
+    if(!p) return;
+    var isHere=city===currentCity;
+    var clickable=!isHere && typeof opts.onCityClick==='function';
+    var g=el('g',{'class':'map-city-real','style':'cursor:'+(clickable?'pointer':'default')});
+    var dot=el('circle',{
+      cx:p.x,cy:p.y,r:isHere?10:7,
+      fill:isHere?'#ffd200':'#243447',
+      stroke:isHere?'#c99700':'#ffffff','stroke-width':'3'
     });
     g.appendChild(dot);
-    var label = el('text', {
-      x:c.x, y:c.y - (isHere ? 13 : 10), 'text-anchor':'middle',
-      'font-size': isHere ? '11' : '9', 'font-weight': isHere ? '800' : '600',
-      fill: isHere ? '#3a2c00' : '#243447'
+    var label=el('text',{
+      x:p.x,y:p.y-(isHere?15:12),'text-anchor':'middle',
+      'font-size':isHere?'15':'13','font-weight':isHere?'800':'700',
+      fill:'#18232d','paint-order':'stroke','stroke':'#fff','stroke-width':'4','stroke-linejoin':'round'
     });
-    label.textContent = city;
+    label.textContent=city;
     g.appendChild(label);
-    if(!isHere){
-      var titleText = opts.cityTitleFn ? opts.cityTitleFn(city) : city;
-      var title = document.createElementNS(SVG_NS, 'title');
-      title.textContent = titleText;
-      g.appendChild(title);
-      if(clickable){ g.onclick = function(){ opts.onCityClick(city); }; }
-    }
-    svg.appendChild(g);
 
-    // ---- İlan rozeti: o şehirde ilan varsa küçük kırmızı rozet ----
-    var cityListings = byCity[city];
-    if(cityListings && cityListings.length>0){
-      var bg = el('g', {'class':'map-listing-badge', style:'cursor:' + (opts.onBadgeClick ? 'pointer' : 'default')});
-      var badge = el('circle', {cx:c.x+8, cy:c.y-8, r:6.5, fill:'#c62828', stroke:'#fff', 'stroke-width':'1.2'});
-      bg.appendChild(badge);
-      var count = el('text', {
-        x:c.x+8, y:c.y-8+2.8, 'text-anchor':'middle',
-        'font-size':'7.5', 'font-weight':'800', fill:'#fff'
-      });
-      count.textContent = String(cityListings.length);
+    var title=document.createElementNS(SVG_NS,'title');
+    title.textContent=opts.cityTitleFn ? opts.cityTitleFn(city) : city;
+    g.appendChild(title);
+    if(clickable){
+      g.addEventListener('click',function(){ opts.onCityClick(city); });
+    }
+    layer.appendChild(g);
+
+    var cityListings=byCity[city];
+    if(cityListings && cityListings.length){
+      var bg=el('g',{'class':'map-listing-badge','style':'cursor:'+(opts.onBadgeClick?'pointer':'default')});
+      bg.appendChild(el('circle',{cx:p.x+13,cy:p.y-13,r:10,fill:'#c62828',stroke:'#fff','stroke-width':'2'}));
+      var count=el('text',{x:p.x+13,y:p.y-9,'text-anchor':'middle','font-size':'10','font-weight':'800',fill:'#fff'});
+      count.textContent=String(cityListings.length);
       bg.appendChild(count);
-      var btitle = document.createElementNS(SVG_NS, 'title');
-      btitle.textContent = cityListings.length + ' ilan — ' + city + (opts.onBadgeClick ? ' (görmek için tıkla)' : '');
-      bg.appendChild(btitle);
-      if(opts.onBadgeClick){
-        bg.onclick = function(e){ e.stopPropagation(); opts.onBadgeClick(city, cityListings); };
-      }
-      svg.appendChild(bg);
+      var bt=document.createElementNS(SVG_NS,'title');
+      bt.textContent=cityListings.length+' ilan — '+city;
+      bg.appendChild(bt);
+      if(opts.onBadgeClick) bg.addEventListener('click',function(e){e.stopPropagation();opts.onBadgeClick(city,cityListings);});
+      layer.appendChild(bg);
     }
   });
 
+  svg.appendChild(layer);
+}
+
+function installRealMap(container, sourceSvg, opts){
+  if(!container || !document.body.contains(container)) return;
+  var svg=document.importNode(sourceSvg,true);
+  styleProvinceMap(svg);
+  container.innerHTML='';
   container.appendChild(svg);
-  return svg;
+  drawMarkers(svg,opts);
+}
+
+export function renderMap(container, opts){
+  opts=opts||{};
+  var fallback=el('svg',{viewBox:VIEWBOX,'class':'map-svg'});
+  fallback.appendChild(el('path',{d:TURKEY_PATH,fill:'#eef3ea',stroke:'#9db98f','stroke-width':'1.5','stroke-linejoin':'round'}));
+  container.appendChild(fallback);
+
+  // Gerçek 81 il sınırlarını içeren SVG, MIT lisanslı açık kaynak
+  // dnomak/svg-turkiye-haritasi kaynağından yüklenir.
+  loadRealMap().then(function(svg){
+    if(svg) installRealMap(container,svg,opts);
+  });
+
+  return fallback;
 }
