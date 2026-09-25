@@ -73,8 +73,13 @@ function drawMarkers(svg, opts){
 
   CITIES.forEach(function(city){
     var id=cityId(city), group=id ? svg.querySelector('#'+id) : null;
-    if(!group) return;
-    points[city]=centerOf(group);
+    if(group){
+      points[city]=centerOf(group);
+    } else if(CITY_COORDS[city]){
+      // Gerçek SVG henüz yüklenmediyse bile fallback harita üzerinde
+      // oyuncunun konumu ve hedefi hemen görünür.
+      points[city]={x:CITY_COORDS[city].x,y:CITY_COORDS[city].y};
+    }
   });
 
   var layer=el('g', {'class':'map-overlay-layer'});
@@ -168,6 +173,8 @@ export function renderMap(container, opts){
   opts=opts||{};
   var fallback=el('svg',{viewBox:VIEWBOX,'class':'map-svg'});
   fallback.appendChild(el('path',{d:TURKEY_PATH,fill:'#eef3ea',stroke:'#9db98f','stroke-width':'1.5','stroke-linejoin':'round'}));
+  // Gerçek 81 il SVG'si yüklenene kadar oyuncunun konumu kaybolmasın.
+  drawMarkers(fallback,opts);
   container.appendChild(fallback);
 
   // Gerçek 81 il sınırlarını içeren SVG artık oyunun içinde tutuluyor;
