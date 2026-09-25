@@ -394,6 +394,26 @@ export var Game = {
     return pad(d) + '/' + pad(m) + '/' + y;
   },
 
+  doRentShop: function(id){
+    var self=this, state=this.state, player=this.player;
+    var item=this.findListing(id);
+    if(!item || item.category!=='dukkan') return;
+    var desc=TransactionManager.rentShop(player,item);
+    this.perform(desc,function(){
+      var idx=state.listings.findIndex(function(l){return l.id===id;});
+      if(idx<0) return;
+      state.listings.splice(idx,1);
+      player.spend(desc.cost);
+      item.owned=true; item.purchasePrice=0; item.leased=true; item.mode='kendim';
+      item.shopId=null; item.slots=[]; item.upgrades=[]; item.rentMult=1; item.passiveBonus=0; item.saleBonus=1;
+      state.shops.push(item);
+      self.addLog('Dükkan kiralandı: '+item.title+' — aylık kira '+fmt(item.rent),'neg');
+      toast('Dükkan kiralandı. Artık kapasite ve vitrinini kullanabilirsin.');
+      state.openDetailId=null;
+      self.render();
+    });
+  },
+
   doBuy: function(id){
     var self = this, state = this.state, player = this.player;
     var item = this.findListing(id);
