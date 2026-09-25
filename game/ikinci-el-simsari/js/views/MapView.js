@@ -189,8 +189,9 @@ export var MapView = {
     head.appendChild(title);
     var closeBtn = document.createElement('button');
     closeBtn.className = 'btn-ghost btn-sm';
-    closeBtn.textContent = 'Hedefi temizle';
-    closeBtn.onclick = function(){ Game.state.travelTargetCity = null; Game.render(); };
+    closeBtn.textContent = busy ? 'Yolculuk sürüyor' : 'Hedefi temizle';
+    closeBtn.disabled = busy;
+    closeBtn.onclick = function(){ if(busy) return; Game.state.travelTargetCity = null; Game.render(); };
     head.appendChild(closeBtn);
     card.appendChild(head);
 
