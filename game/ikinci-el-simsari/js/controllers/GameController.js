@@ -233,7 +233,7 @@ export var Game = {
     if(!item || !item.ekspertizDone || !item.sellerClaims) return [];
     return Object.keys(item.sellerClaims).filter(function(key){
       var claim = item.sellerClaims[key];
-      if(!claim) return false;
+      if(claim !== true) return false;
       if(key==='fiyat') return false;
       return item.faults.some(function(f){
         return f.tag===key && !f.hidden;
