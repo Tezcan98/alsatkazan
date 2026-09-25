@@ -84,11 +84,16 @@ export var Market = {
     var askingPrice = Math.max(165000, Math.round(askingBase*noise));
 
     var carDef = pick(CAR_MODELS);
+    var titleTag;
+    if(isNaN(year)) titleTag='Temiz';
+    else if(faults.some(function(f){return f.heavy;})) titleTag='Ağır Hasar Kayıtlı';
+    else if(partStatus && Object.keys(partStatus).filter(function(k){return partStatus[k]!=='orijinal';}).length===0) titleTag=(Math.random()<0.55?'İlk Sahibinden · Temiz':'Hatasız · Temiz');
+    else titleTag=pick(['İlk Sahibinden','Temiz Aile Aracı','Masrafsız · Temiz','Düşük KM · Temiz','Bakımlı · Temiz']);
     // ---- Satıcı kimliği: bir kısmı bireysel satıcı, bir kısmı (galeriler)
     // birden fazla aracı aynı anda satan sabit bayii isimlerinden biri ----
     var isGaleri = Math.random() < GALERI_CAR_CHANCE;
     return new Car({
-      title: year + " " + carDef.brand + " " + carDef.model,
+      title: titleTag + ' — ' + year + ' ' + carDef.brand + ' ' + carDef.model,
       brand: carDef.brand,
       year: year, km: kmBase, trans: pick(TRANS), fuel: pick(FUEL), body: pick(BODY), color: pick(COLORS),
       location: pick(CITIES),
