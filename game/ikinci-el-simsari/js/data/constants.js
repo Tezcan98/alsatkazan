@@ -293,7 +293,7 @@ export const DEAL_DISCOUNT_MAX = 0.34;
 // sadece sigortaya bildirilmiş kazaları gösterir — gerçek hayatta olduğu
 // gibi her kaza sigortaya bildirilmez, bu yüzden ağır hasar kayıtlarının
 // bir kısmı TRAMER sorgusunda görünmeyebilir (TRAMER_MISS_CHANCE).
-export const INSPECT_MISS_CHANCE = 0.16;
+export const INSPECT_MISS_CHANCE = 0.08;
 export const EKSPERTIZ_BASE_COST = 3500;
 export const TRAMER_COST = 300;
 export const TRAMER_MISS_CHANCE = 0.30;
