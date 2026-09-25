@@ -48,7 +48,10 @@ export const IMG = {
     ledgerPanel: 'img/panel_ledger.png',
     controlPanel: 'img/panel_control.png',
     avatar: 'img/avatar.png',
-    hero: 'img/hero_banner.png'
+    hero: 'img/hero_banner.png',
+    trophy: 'img/icon_trophy.svg',
+    tasks: 'img/icon_tasks.svg',
+    event: 'img/icon_event.svg'
   },
 
   nav: {
