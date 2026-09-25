@@ -480,11 +480,14 @@ export var Game = {
         var present2 = item.faults.some(function(f){return f.tag===key;});
         if(present2){
           if(Math.random() < item.sellerHonesty){
+            item.sellerClaims[key] = true;
             reply = "Açık konuşayım, ufak bir " + (key==='hasar' ? 'kayıt' : key==='motor' ? 'sorun' : key==='boya' ? 'boya işlemi' : key==='tapu' ? 'kayıt' : key==='yol' ? 'durum' : 'husus') + " var ama fiyata yansıttım zaten.";
           } else {
+            item.sellerClaims[key] = false;
             reply = "Hayır, kesinlikle öyle bir şey yok, çok temiz.";
           }
         } else {
+          item.sellerClaims[key] = true;
           reply = "Hayır, gayet temiz, o konuda hiç sorun yok.";
         }
       }
