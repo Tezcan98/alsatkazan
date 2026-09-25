@@ -21,8 +21,7 @@ export var AuthView={
     var root=document.getElementById('modalRoot');if(!root)return;root.innerHTML='';
     var back=document.createElement('div');back.className='modal-backdrop auth-backdrop';
     var box=document.createElement('div');box.className='modal-box auth-box';
-    var close=document.createElement('button');close.className='auth-close';close.textContent='×';close.onclick=function(){root.innerHTML=''};box.appendChild(close);
-    if(!AuthService.configured){box.innerHTML+='<h2>Simsar hesabı</h2><p class="auth-note">Üyelik altyapısı hazır. Supabase proje URL ve publishable key değerlerini js/config.js içine eklemen gerekiyor.</p>';back.appendChild(box);root.appendChild(back);return}
+    if(!AuthService.configured){box.innerHTML='<button class="auth-close">×</button><h2>Simsar hesabı</h2><p class="auth-note">Üyelik altyapısı hazır. Supabase proje URL ve publishable key değerlerini js/config.js içine eklemen gerekiyor.</p>';box.querySelector('.auth-close').onclick=function(){root.innerHTML=''};back.appendChild(box);root.appendChild(back);return}
     if(AuthService.user)this.account(box,root);else this.login(box,root);
     back.appendChild(box);root.appendChild(back);
   },
@@ -36,7 +35,7 @@ export var AuthView={
     var e=this.field('E-posta','email','ornek@mail.com'),p=this.field('Şifre','password','••••••••');box.appendChild(e.wrap);box.appendChild(p.wrap);
     var msg=document.createElement('div');msg.className='auth-msg';box.appendChild(msg);
     var row=document.createElement('div');row.className='auth-actions';
-    var inb=document.createElement('button');inb.className='btn-navy';inb.textContent='Giriş yap';inb.onclick=async function(){msg.textContent='Giriş yapılıyor...';try{await AuthService.signIn(e.input.value,p.input.value);root.innerHTML='';toast('Hoş geldin.');}catch(x){msg.textContent=x.message||'Giriş yapılamadı.'}};
+    var inb=document.createElement('button');inb.className='btn-navy';inb.textContent='Giriş yap';inb.onclick=async function(){msg.textContent='Giriş yapılıyor...';try{await AuthService.signIn(e.input.value,p.input.value);root.innerHTML='';toast('Hoş geldin.')}catch(x){msg.textContent=x.message||'Giriş yapılamadı.'}};
     var rb=document.createElement('button');rb.className='btn-ghost';rb.textContent='Üye ol';rb.onclick=function(){AuthView.register(box,root)};
     row.appendChild(inb);row.appendChild(rb);box.appendChild(row);
     var forgot=document.createElement('button');forgot.className='auth-link';forgot.textContent='Şifremi unuttum';forgot.onclick=function(){AuthView.forgot(box,root)};box.appendChild(forgot);
@@ -46,8 +45,7 @@ export var AuthView={
     box.querySelector('.auth-close').onclick=function(){root.innerHTML=''};
     var n=this.field('Oyuncu adı','text','Örn. Enes'),e=this.field('E-posta','email','ornek@mail.com'),p=this.field('Şifre','password','En az 8 karakter');box.appendChild(n.wrap);box.appendChild(e.wrap);box.appendChild(p.wrap);
     var msg=document.createElement('div');msg.className='auth-msg';box.appendChild(msg);
-    var b=document.createElement('button');b.className='btn-orange';b.textContent='Hesap oluştur';b.onclick=async function(){if(p.input.value.length<8){msg.textContent='Şifre en az 8 karakter olmalı.';return}try{await AuthService.signUp(e.input.value,p.input.value,n.input.value);msg.textContent='Doğrulama e-postası gönderildi. E-postadaki bağlantıya tıklayıp ardından giriş yap.'}catch(x){msg.textContent=x.message||'Kayıt oluşturulamadı.'}};
-    box.appendChild(b);
+    var b=document.createElement('button');b.className='btn-orange';b.textContent='Hesap oluştur';b.onclick=async function(){if(p.input.value.length<8){msg.textContent='Şifre en az 8 karakter olmalı.';return}try{await AuthService.signUp(e.input.value,p.input.value,n.input.value);msg.textContent='Doğrulama e-postası gönderildi. E-postadaki bağlantıya tıklayıp ardından giriş yap.'}catch(x){msg.textContent=x.message||'Kayıt oluşturulamadı.'}};box.appendChild(b);
     var back=document.createElement('button');back.className='auth-link';back.textContent='← Girişe dön';back.onclick=function(){AuthView.login(box,root)};box.appendChild(back);
   },
   forgot:function(box,root){
