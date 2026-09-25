@@ -72,7 +72,7 @@ export var Game = {
   _msgSeq: 0,
   stampMsg: function(m){ m.ts = ++this._msgSeq; return m; },
 
-  // ---- Meta oyun: günlük görevler + lig + piyasa olayı ----
+  // ---- Meta oyun: günlük görevler + piyasa olayı ----
   ensureDailyTasks: function(){
     var p=this.player, d=this.state.day;
     if(p.dailyTaskDay===d && p.dailyTasks && p.dailyTasks.length) return;
@@ -100,22 +100,6 @@ export var Game = {
         Game.addLog('Günlük görev tamamlandı: '+t.title+' — '+fmt(t.reward), 'pos');
       }
     });
-  },
-  leagueInfo: function(){
-    var s=Math.max(0,this.score());
-    var leagues=[
-      {name:'Çırak Simsar',min:0},
-      {name:'Mahalle Esnafı',min:2500},
-      {name:'Simsar',min:7500},
-      {name:'Usta Simsar',min:15000},
-      {name:'Pazar Ustası',min:28000},
-      {name:'Simsar Patronu',min:48000},
-      {name:'Efsane Simsar',min:80000}
-    ];
-    var cur=leagues[0], next=null;
-    leagues.forEach(function(l){if(s>=l.min) cur=l;});
-    for(var i=0;i<leagues.length;i++){if(leagues[i].min>s){next=leagues[i];break;}}
-    return {name:cur.name,min:cur.min,next:next,progress:next?Math.round((s-cur.min)/(next.min-cur.min)*100):100};
   },
   score: function(){
     var p=this.player;
