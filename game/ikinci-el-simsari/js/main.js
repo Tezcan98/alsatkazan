@@ -26,7 +26,7 @@ function render(){
   if(Game.state.openDetailId){var ov=DetailView.render();if(ov)document.body.appendChild(ov);else Game.state.openDetailId=null;}
 }
 Game.render=render;
-  Persistence.scheduleSave(Game);
+
 document.querySelectorAll('#bottombar button').forEach(function(b){b.onclick=function(){Game.state.tab=b.dataset.tab;Game.state.openShopId=null;Game.state.openDetailId=null;Game.state.openMessageThreadItemId=null;Game.state.sbmThreadOpen=false;render();}});
 AuthView.init();
 await Game.init();
