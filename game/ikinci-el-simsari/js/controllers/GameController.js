@@ -223,6 +223,7 @@ export var Game = {
       player.addMetaXp(12);
       self.checkAchievements();
       self.render();
+      setTimeout(function(){ self.render(); }, 0);
     });
   },
 
