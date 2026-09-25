@@ -95,6 +95,7 @@ export var ListingsView = {
     var self = this;
     var state = Game.state;
     var renderTimer = null;
+    var isMine = state.listingFilter === 'ilanlarim';
     function renderDebounced(){ clearTimeout(renderTimer); renderTimer=setTimeout(function(){Game.render();},180); }
 
     var filterbar = document.createElement('div');
@@ -135,7 +136,6 @@ export var ListingsView = {
       container.appendChild(searchCard);
     }
 
-    var isMine = state.listingFilter === 'ilanlarim';
     var isParts = state.listingFilter === 'parca';
 
     if(isParts){
