@@ -27,6 +27,9 @@ export var ListingsView = {
     info.className = 'info';
     var h3 = document.createElement('h3');
     h3.textContent = item.title;
+    if(!opts.mine && item.createdDay===Game.state.day){
+      var nb=document.createElement('span'); nb.className='badge new-badge'; nb.textContent='YENİ'; h3.appendChild(nb);
+    }
     if(item.inspected && !opts.mine){
       var b = document.createElement('span');
       b.className = 'badge inspected';
@@ -57,7 +60,7 @@ export var ListingsView = {
     info.appendChild(h3);
     var meta = document.createElement('div');
     meta.className = 'meta';
-    meta.textContent = item.metaLine ? item.metaLine() : '';
+    meta.textContent = (item.metaLine ? item.metaLine() : '') + (item.location ? ' · ' + item.location : '');
     info.appendChild(meta);
     row.appendChild(info);
 
@@ -91,6 +94,8 @@ export var ListingsView = {
   render: function(container){
     var self = this;
     var state = Game.state;
+    var renderTimer = null;
+    function renderDebounced(){ clearTimeout(renderTimer); renderTimer=setTimeout(function(){Game.render();},180); }
 
     var filterbar = document.createElement('div');
     filterbar.className = 'filterbar';
@@ -110,6 +115,25 @@ export var ListingsView = {
       filterbar.appendChild(b);
     });
     container.appendChild(filterbar);
+
+    if(!isMine){
+      var searchCard=document.createElement('div');
+      searchCard.className='market-search card';
+      var search=document.createElement('input');
+      search.className='market-search-input';
+      search.type='search';
+      search.placeholder='Marka, model, ilan başlığı veya şehir ara...';
+      search.value=state.searchText||'';
+      search.oninput=function(){state.searchText=search.value; renderDebounced();};
+      searchCard.appendChild(search);
+      var city=document.createElement('select');
+      city.className='market-city-select';
+      var cities=['hepsi'].concat(Array.from(new Set(state.listings.map(function(l){return l.location;}).filter(Boolean))));
+      cities.forEach(function(x){var o=document.createElement('option');o.value=x;o.textContent=x==='hepsi'?'Tüm şehirler':x;if(state.cityFilter===x)o.selected=true;city.appendChild(o);});
+      city.onchange=function(){state.cityFilter=city.value;Game.render();};
+      searchCard.appendChild(city);
+      container.appendChild(searchCard);
+    }
 
     var isMine = state.listingFilter === 'ilanlarim';
     var isParts = state.listingFilter === 'parca';
@@ -173,7 +197,7 @@ export var ListingsView = {
       var sortSel = document.createElement('select');
       sortSel.style.padding = '5px'; sortSel.style.border = '1px solid var(--border)'; sortSel.style.borderRadius = '2px';
       [
-        ['varsayilan','Varsayılan'], ['fiyat-artan','Fiyat: Artan'], ['fiyat-azalan','Fiyat: Azalan']
+        ['varsayilan','Varsayılan'], ['yeni','En yeni'], ['fiyat-artan','Fiyat: Artan'], ['fiyat-azalan','Fiyat: Azalan']
       ].forEach(function(o){
         var opt = document.createElement('option'); opt.value = o[0]; opt.textContent = o[1];
         if(state.listingSort===o[0]) opt.selected = true;
@@ -207,13 +231,17 @@ export var ListingsView = {
       filtered = state.listings.filter(function(l){return l.favorite;});
     } else {
       filtered = state.listings.filter(function(l){ return state.listingFilter==='hepsi' || l.category===state.listingFilter; });
+      var q=(state.searchText||'').trim().toLocaleLowerCase('tr-TR');
+      if(q) filtered=filtered.filter(function(l){return [l.title,l.location,l.brand,l.model,l.plate].filter(Boolean).join(' ').toLocaleLowerCase('tr-TR').indexOf(q)>=0;});
+      if(state.cityFilter && state.cityFilter!=='hepsi') filtered=filtered.filter(function(l){return l.location===state.cityFilter;});
     }
 
     if(!isMine){
       var min = parseFloat(state.priceMin), max = parseFloat(state.priceMax);
       if(!isNaN(min)) filtered = filtered.filter(function(l){return l.askingPrice>=min;});
       if(!isNaN(max)) filtered = filtered.filter(function(l){return l.askingPrice<=max;});
-      if(state.listingSort==='fiyat-artan') filtered = filtered.slice().sort(function(a,b){return a.askingPrice-b.askingPrice;});
+      if(state.listingSort==='yeni') filtered = filtered.slice().sort(function(a,b){return (b.createdDay||0)-(a.createdDay||0);});
+      else if(state.listingSort==='fiyat-artan') filtered = filtered.slice().sort(function(a,b){return a.askingPrice-b.askingPrice;});
       else if(state.listingSort==='fiyat-azalan') filtered = filtered.slice().sort(function(a,b){return b.askingPrice-a.askingPrice;});
     }
 
