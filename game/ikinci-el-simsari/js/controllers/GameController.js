@@ -145,7 +145,7 @@ export var Game = {
     BilancoDialog.init();
     OperationManager.init();
     await AuthService.init();
-    await Persistence.init();
+    await Persistence.init(this);
     var restored=await Persistence.hydrate(this);
     if(restored){
       this.ensureDailyTasks();
