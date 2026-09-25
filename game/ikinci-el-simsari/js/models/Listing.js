@@ -8,6 +8,8 @@ export function Listing(props){
   Object.assign(this, props);
   this.id = uid();
   this.priceAsked = false;
+  this.sellerClaims = {};
+  this.negotiationDone = false;
   this.messages = [];
   this.inspected = false;
   this.owned = false;
