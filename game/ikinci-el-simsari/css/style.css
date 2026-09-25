@@ -175,3 +175,6 @@ nav.bottombar button.active .ic{box-shadow:0 0 0 2px var(--orange)}
   .listrow{min-height:92px}
   .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
+
+.brand-subtitle{font-size:.65rem;color:#98a2b3;margin-top:2px;letter-spacing:.01em}
+@media(max-width:600px){.brand-subtitle{display:none}}
