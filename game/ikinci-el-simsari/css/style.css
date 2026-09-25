@@ -17,3 +17,6 @@
 .new-badge{background:#e9f5ee!important;color:#287547!important}
 .listrow{transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}.listrow:hover{transform:translateY(-1px);border-color:#c7d0d7;box-shadow:0 7px 18px rgba(23,35,47,.08)}
 @media(max-width:600px){.market-search{align-items:stretch;flex-direction:column}.market-search-input,.market-city-select{width:100%}}
+
+/* === REAL TURKEY MAP === */
+.map-svg-real{width:100%;height:auto;min-height:300px;background:linear-gradient(180deg,#f7fbfd,#eef3ea);border-radius:10px}.map-svg-real #turkiye>g:hover path{fill:#e6edf2}.map-svg-real .map-city-real circle{filter:drop-shadow(0 2px 2px rgba(23,35,47,.25))}.map-svg-real .map-listing-badge circle{filter:drop-shadow(0 2px 2px rgba(23,35,47,.2))}.map-svg-real .map-city-real:hover circle{stroke:#f4b400;stroke-width:4}
