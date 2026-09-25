@@ -14,7 +14,7 @@ JSON dışında hiçbir şey döndürme.
 Şehirler: ${cities.join(', ')}.
 Şema: [{"title":"...","brand":"...","model":"...","year":2020,"km":85000,"trans":"Otomatik","fuel":"Benzin","body":"Sedan","color":"Beyaz","location":"İstanbul","description":"...","sellerType":"sahibinden","sellerName":"...","galeriName":null,"sellerMemberYears":7,"sellerSalesCount":12,"sellerVerified":true,"ownerCount":1,"damageRecord":0,"heavyDamage":false,"damageRecordNote":"...","maintenanceHistory":"...","askingPrice":1234567,"trueValue":1300000,"faults":[]}]`;
 
-const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent', {
+const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent', {
   method: 'POST',
   headers: {'Content-Type':'application/json','x-goog-api-key':API_KEY},
   body: JSON.stringify({contents:[{parts:[{text:prompt}]}], generationConfig:{responseMimeType:'application/json'}})
