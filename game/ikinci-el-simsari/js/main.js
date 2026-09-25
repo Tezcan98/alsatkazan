@@ -11,6 +11,8 @@ import { ProfilView } from './views/ProfilView.js';
 import { LeaderboardView } from './views/LeaderboardView.js';
 import { ControlPanelView } from './views/ControlPanelView.js';
 import { MapView } from './views/MapView.js';
+import { AuthView } from './views/AuthView.js';
+import { Persistence } from './services/Persistence.js';
 
 var PANEL_CHILD_TABS = ['ustalar','dukkanlar','profil','harita','leaderboard'];
 function render(){
@@ -24,5 +26,8 @@ function render(){
   if(Game.state.openDetailId){var ov=DetailView.render();if(ov)document.body.appendChild(ov);else Game.state.openDetailId=null;}
 }
 Game.render=render;
+  Persistence.scheduleSave(Game);
 document.querySelectorAll('#bottombar button').forEach(function(b){b.onclick=function(){Game.state.tab=b.dataset.tab;Game.state.openShopId=null;Game.state.openDetailId=null;Game.state.openMessageThreadItemId=null;Game.state.sbmThreadOpen=false;render();}});
-Game.init(); render();
+AuthView.init();
+await Game.init();
+render();
