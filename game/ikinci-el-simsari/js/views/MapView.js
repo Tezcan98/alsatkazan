@@ -30,9 +30,8 @@ export var MapView = {
     container.appendChild(h2);
 
     var kicker = document.createElement('div');
-    kicker.className = 'desc-note';
-    kicker.style.marginBottom = '4px';
-    kicker.textContent = 'Şu an: ' + player.currentCity + ' — başka bir şehre gitmek için üzerine tıkla, sonra Araba ya da Otobüs seç. Kırmızı rozetler o şehirdeki ilan sayısını gösterir.';
+    kicker.className = 'map-location-card';
+    kicker.innerHTML = '<span class="map-location-pin">📍</span><div><div class="map-location-kicker">ŞU AN BURADASIN</div><div class="map-location-city">' + player.currentCity + '</div><div class="map-location-help">Hedef şehre tıkla; ardından Araba veya Otobüs ile yola çık.</div></div>';
     container.appendChild(kicker);
 
     var travelCar = player.travelCarId ? Game.findInv(player.travelCarId) : null;
@@ -139,6 +138,39 @@ export var MapView = {
   // Seçili hedef şehir için Araba / Otobüs seçeneklerini gösteren panel.
   renderTravelPanel: function(city, busy){
     var player = Game.player;
+
+    // Yolculuk başladıktan sonra hedef seçme kartını "Vazgeç" ile
+    // göstermiyoruz. İşlem arka planda devam eder; ekranda açıkça
+    // hangi şehirler arasında gidildiği ve seçilen mod görünür.
+    if(busy && OperationManager.currentDesc && OperationManager.currentDesc.type==='TRAVEL'){
+      var active = OperationManager.currentDesc;
+      var status = document.createElement('div');
+      status.className = 'card travel-progress-card';
+      status.style.marginTop = '10px';
+
+      var sk = document.createElement('div');
+      sk.className = 'kicker';
+      sk.textContent = 'YOLCULUK DEVAM EDİYOR';
+      status.appendChild(sk);
+
+      var st = document.createElement('div');
+      st.className = 'travel-progress-route';
+      st.textContent = player.currentCity + ' → ' + city;
+      status.appendChild(st);
+
+      var sm = document.createElement('div');
+      sm.className = 'desc-note';
+      sm.style.fontStyle = 'normal';
+      sm.textContent = (active.mode==='car' ? '🚗 Araba ile' : '🚌 Otobüs ile') + ' yoldasın. Yolculuk tamamlanınca konumun otomatik olarak ' + city + ' olur.';
+      status.appendChild(sm);
+
+      var hint = document.createElement('div');
+      hint.className = 'travel-progress-hint';
+      hint.textContent = 'Bu yolculuk iptal edilemez; haritada gezebilir veya diğer sekmelere bakabilirsin.';
+      status.appendChild(hint);
+      return status;
+    }
+
     var dist = Game.cityDistance(player.currentCity, city);
     var carDesc = TransactionManager.travel(player, player.currentCity, city, dist, 'car');
     var busDesc = TransactionManager.travel(player, player.currentCity, city, dist, 'bus');
@@ -156,7 +188,7 @@ export var MapView = {
     head.appendChild(title);
     var closeBtn = document.createElement('button');
     closeBtn.className = 'btn-ghost btn-sm';
-    closeBtn.textContent = 'Vazgeç';
+    closeBtn.textContent = 'Hedefi temizle';
     closeBtn.onclick = function(){ Game.state.travelTargetCity = null; Game.render(); };
     head.appendChild(closeBtn);
     card.appendChild(head);
