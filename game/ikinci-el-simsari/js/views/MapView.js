@@ -52,6 +52,7 @@ export var MapView = {
 
     renderMap(mapCard, {
       currentCity: player.currentCity,
+      targetCity: state.travelTargetCity,
       listings: state.listings,
       cityTitleFn: function(city){
         var dist = Game.cityDistance(player.currentCity, city);
