@@ -7,7 +7,7 @@ const count = Number(process.env.LISTING_COUNT || 8);
 const cities = ['İstanbul','Ankara','İzmir','Bursa','Antalya','Kocaeli','Adana','Konya','Gaziantep'];
 const prompt = `Bir ikinci el otomobil simülasyonu için ${count} adet gerçekçi ilan üret.
 İlanlar Türkiye ikinci el piyasasındaki ilan diliyle yazılsın; sadece "2019 Ford Focus 1.5" gibi kuru başlık kullanma.
-Başlık örneği tarzı: "İlk Sahibinden Temiz — 2019 Ford Focus 1.5 EcoBlue" veya "Galeriden Yetkili Servis Bakımlı — 2020 Renault Megane 1.3 TCe".
+Başlıklar birbirinin kopyası olmasın. "İlk Sahibinden" ifadesini otomatik şablon gibi kullanma; en fazla az sayıda ilanda ve sadece ownerCount=1 ise kullan. Bunun yerine satıcının hikâyesini ve aracın karakterini anlatan özgün başlıklar üret: "Uzun yol görmüş, bakımları tam", "Şehir içi kullanıldı — diri", "Yeni araca geçiyorum", "Aile büyüdü, araç küçüldü", "Galeriden servis bakımlı", "Hafta sonu kullanıldı", "Fiyatı konuşulur — detaylı ilan", "İş için kullanıldı, düzenli bakımlı" gibi. Aynı kalıbı art arda tekrar etme.
 Satıcı tipi bireysel (sahibinden) veya galeri olsun. Her ilanda km, model yılı, şehir, vites, yakıt, kasa, renk, sahip sayısı, hasar kaydı TL, ağır hasar durumu, boya/değişen parçalar, bakım geçmişi, plaka benzeri maskeleme ve doğal bir açıklama olsun.
 İlan açıklaması satıcı ağzından 2-4 cümle olsun. Uydurma ekspertiz sonucu kesin gerçekmiş gibi yazma; hasar/servis bilgilerinde "beyan" veya "kayıt" ayrımını koru.
 JSON dışında hiçbir şey döndürme.
