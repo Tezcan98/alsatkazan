@@ -226,6 +226,47 @@ export var Game = {
     });
   },
 
+  // Ekspertiz ile satıcının önceki beyanı çelişiyorsa pazarlık açılır.
+  // Oyuncu daha önce hazır sorulardan birini sormuş olmalı; aksi halde
+  // "adamın dediğinden farklı" karşılaştırması yapılamaz.
+  expertDiscrepancy: function(item){
+    if(!item || !item.ekspertizDone || !item.sellerClaims) return [];
+    return Object.keys(item.sellerClaims).filter(function(key){
+      var claim = item.sellerClaims[key];
+      if(!claim) return false;
+      if(key==='fiyat') return false;
+      return item.faults.some(function(f){
+        return f.tag===key && !f.hidden;
+      });
+    });
+  },
+
+  negotiateExpertDiscrepancy: function(id){
+    var self=this, player=this.player, item=this.findListing(id);
+    if(!item || item.owned || !item.ekspertizDone || item.negotiationDone) return;
+    var mismatches=this.expertDiscrepancy(item);
+    if(!mismatches.length){ toast('Ekspertiz ile satıcının beyanı arasında kayıtlı bir fark yok.'); return; }
+
+    var totalLoss=mismatches.reduce(function(sum,key){
+      return sum + item.faults.filter(function(f){return f.tag===key && !f.hidden;})
+        .reduce(function(s,f){return s+f.loss;},0);
+    },0);
+    var skill=player.skillLevel('pazarlik');
+    var sellerPressure=item.sellerHonesty < 0.45 ? 1.15 : 0.9;
+    var discount=clamp(0.04 + skill*0.012 + Math.min(0.10,totalLoss/2000000)*sellerPressure,0.04,0.20);
+    var reduction=Math.max(2500,Math.round(item.askingPrice*discount/500)*500);
+    var oldPrice=item.askingPrice;
+    item.askingPrice=Math.max(500,item.askingPrice-reduction);
+    item.negotiationDone=true;
+    item.messages.push(self.stampMsg({from:'me',text:'Ekspertizde ilan beyanınızla uyuşmayan durumlar çıktı. '+fmt(reduction)+' TL aşağıdan, '+fmt(item.askingPrice)+' TL teklif ediyorum.'}));
+    item.messages.push(self.stampMsg({from:'seller',text:'Ekspertiz raporunu gördüm. '+fmt(reduction)+' TL indirimle '+fmt(item.askingPrice)+' TL son fiyatım olsun.'}));
+    player.addXp('pazarlik',18);
+    player.addMetaXp(10);
+    self.addLog('Ekspertiz farkı üzerinden pazarlık edildi: '+item.title+' — '+fmt(oldPrice)+' → '+fmt(item.askingPrice), 'pos');
+    toast('Ekspertiz farkı pazarlığa yansıdı: -'+fmt(reduction));
+    self.render();
+  },
+
   // TRAMER: SBM üzerinden resmi kaza kaydı sorgusu — sadece araba, sadece
   // ağır hasar (heavy) kayıtlarını açar, TRAMER_MISS_CHANCE ile bazı
   // kazalar sigortaya bildirilmemiş olabileceğinden görünmeyebilir.
