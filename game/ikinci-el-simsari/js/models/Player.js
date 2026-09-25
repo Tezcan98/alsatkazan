@@ -24,6 +24,12 @@ export function Player(){
   // Seyahat aracı: garajdaki bir arabanın id'si — seçiliyse seyahatlerde
   // "o araçla gidiliyor" sayılır ve km'si artar (bkz. GarageView, Game.doTravel)
   this.travelCarId = null;
+  // Meta-ilerleme: lig, seri ve günlük görevler
+  this.xp = 0;
+  this.dealStreak = 0;
+  this.bestDealStreak = 0;
+  this.dailyTasks = [];
+  this.dailyTaskDay = 0;
 }
 Player.prototype.skillLevel = function(key){
   return clamp(1 + Math.floor(this.skills[key]/SKILL_XP_PER_LEVEL), 1, 10);
