@@ -20,3 +20,158 @@
 
 /* === REAL TURKEY MAP === */
 .map-svg-real{width:100%;height:auto;min-height:300px;background:linear-gradient(180deg,#f7fbfd,#eef3ea);border-radius:10px}.map-svg-real #turkiye>g:hover path{fill:#e6edf2}.map-svg-real .map-city-real circle{filter:drop-shadow(0 2px 2px rgba(23,35,47,.25))}.map-svg-real .map-listing-badge circle{filter:drop-shadow(0 2px 2px rgba(23,35,47,.2))}.map-svg-real .map-city-real:hover circle{stroke:#f4b400;stroke-width:4}
+
+
+/* =========================================================
+   MODERN MARKET UI — 2026 visual refresh
+   ========================================================= */
+:root{
+  --page:#f5f7fb; --card:#ffffff; --border:#e7eaf0; --border-soft:#f0f2f6;
+  --ink:#17202a; --ink-soft:#697586; --ink-faint:#9aa4b2;
+  --navy:#101828; --navy-dark:#0b1220; --orange:#ffb703; --orange-dark:#e39b00;
+  --link:#356ae6; --green:#16a36a; --red:#e5484d; --purple:#7357e8;
+  --shadow:0 4px 18px rgba(16,24,40,.055); --shadow-lg:0 18px 50px rgba(16,24,40,.12);
+  --radius:18px;
+}
+body{
+  background:
+    radial-gradient(circle at 10% -5%,rgba(115,87,232,.08),transparent 28%),
+    radial-gradient(circle at 95% 0%,rgba(53,106,230,.07),transparent 25%),
+    var(--page);
+  color:var(--ink); letter-spacing:-.01em;
+}
+header{
+  background:rgba(255,255,255,.88); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(231,234,240,.9); box-shadow:0 5px 25px rgba(16,24,40,.05);
+}
+.topbar{
+  background:linear-gradient(90deg,#0f172a,#1e293b); color:#cbd5e1;
+  padding:7px max(16px,calc((100vw - 1040px)/2)); font-size:.68rem; letter-spacing:.02em;
+}
+.titlerow{padding:16px max(16px,calc((100vw - 1040px)/2)) 12px; background:transparent}
+.brand-mark{
+  width:42px;height:42px;border-radius:13px; transform:rotate(8deg);
+  background:linear-gradient(145deg,#ffd66b,#ffad00); box-shadow:0 8px 20px rgba(255,183,3,.25),inset 1px 1px 2px rgba(255,255,255,.7);
+}
+header h1{font-size:1.38rem;letter-spacing:-.7px}
+header h1 span{color:var(--link)}
+.statbar{
+  max-width:1040px; margin:0 auto 13px; padding:0 16px; gap:8px;
+}
+.statbar .stat{
+  border:1px solid rgba(231,234,240,.95); border-radius:14px; background:rgba(248,250,252,.78);
+  box-shadow:inset 0 1px rgba(255,255,255,.8); padding:9px 10px;
+}
+.statbar .lbl{letter-spacing:.8px;color:#98a2b3}
+.statbar b{font-size:.9rem}
+main{max-width:1040px;padding:18px 16px 105px}
+h2.section{
+  border:0; margin:18px 0 12px; padding:0 2px; font-size:1rem;
+  letter-spacing:-.25px; position:relative;
+}
+h2.section:after{content:"";width:30px;height:3px;background:var(--orange);border-radius:99px;position:absolute;left:2px;bottom:-7px}
+.filterbar{gap:8px;margin-bottom:14px;overflow-x:auto;flex-wrap:nowrap;padding:2px 1px 5px;scrollbar-width:none}
+.filterbar::-webkit-scrollbar{display:none}
+.filterbar button{
+  white-space:nowrap;border:1px solid #e4e7ec;border-radius:999px;background:rgba(255,255,255,.9);
+  padding:8px 14px;box-shadow:0 2px 7px rgba(16,24,40,.035)
+}
+.filterbar button.active,.btn-ghost.active{background:var(--navy);border-color:var(--navy);box-shadow:0 6px 14px rgba(16,24,40,.16)}
+.card,.listrow,.spec-table,.desc-box,.parts-diagram-wrap,.usta-card,.log{
+  border-color:#e7eaf0; border-radius:18px; box-shadow:var(--shadow);
+}
+.listrow{
+  padding:12px; margin-bottom:10px; gap:13px; background:rgba(255,255,255,.94);
+}
+.listrow:hover{border-color:#cdd5df;box-shadow:0 14px 28px rgba(16,24,40,.10);transform:translateY(-2px)}
+.thumb{width:92px;height:70px;border-radius:13px;border:0;background:#eef2f7}
+.listrow h3{font-size:.9rem;font-weight:780;line-height:1.25}
+.listrow .meta{color:#7b8797;font-size:.72rem}
+.listrow .price{font-size:1.02rem;color:#111827}
+.listrow .info{padding-right:4px}
+.listrow .badge{border:1px solid rgba(16,24,40,.05);font-size:.57rem;padding:4px 7px}
+.fav-btn{font-size:1.35rem}
+.market-search{
+  display:grid !important;grid-template-columns:minmax(0,1fr) 170px;gap:8px;padding:10px !important;
+  background:rgba(255,255,255,.88);border-radius:16px;
+}
+.market-search-input,.market-city-select{
+  min-height:42px;border:1px solid #e2e6ec;border-radius:12px;background:#f8fafc;color:var(--ink);
+  padding:0 12px;font:inherit;font-size:.8rem;outline:none;transition:.15s;
+}
+.market-search-input:focus,.market-city-select:focus{border-color:#9bb4f5;box-shadow:0 0 0 4px rgba(53,106,230,.09)}
+.btn-orange,.btn-navy,.btn-ghost,.btn-red{
+  border-radius:12px; min-height:38px; box-shadow:none; transition:transform .16s,box-shadow .16s,filter .16s;
+}
+.btn-orange{background:linear-gradient(135deg,#ffc53d,#ffad00);border:0;box-shadow:0 7px 16px rgba(255,183,3,.18)}
+.btn-orange:hover:not(:disabled),.btn-navy:hover:not(:disabled),.btn-ghost:hover:not(:disabled){transform:translateY(-1px)}
+.btn-navy{background:linear-gradient(135deg,#182235,#0f172a)}
+.btn-ghost{background:#fff;border-color:#e2e6ec}
+.grid{gap:14px}
+.grid .card{padding:14px}
+.card.click:hover{box-shadow:var(--shadow-lg);transform:translateY(-3px)}
+.card-thumb{height:150px;border-radius:14px;border:0}
+.detail-title{font-size:1.42rem;letter-spacing:-.55px}
+.detail-price{font-size:1.7rem;letter-spacing:-.8px}
+.overlay{background:rgba(245,247,251,.98);backdrop-filter:blur(10px)}
+.overlay-header{
+  padding:13px max(14px,calc((100vw - 780px)/2)); border-bottom:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(110deg,#0f172a,#1d2939); box-shadow:0 8px 25px rgba(16,24,40,.16);
+}
+.overlay-header button{border-radius:11px;background:rgba(255,255,255,.08)}
+.overlay-body{padding:18px 16px 110px}
+.hero{height:300px;border:0;border-radius:20px;box-shadow:0 18px 45px rgba(16,24,40,.14)}
+.spec-table{overflow:hidden}
+.spec-table td{padding:11px 13px}
+.spec-table td:first-child{background:#f8fafc}
+.desc-box{line-height:1.65;padding:16px}
+.action-row{gap:9px;margin:16px 0 22px}
+.fault-list{border-radius:15px}
+.fault-list li{padding:10px 12px 10px 29px}
+.parts-diagram-wrap{padding:16px}
+.panel-grid{gap:12px}
+.panel-tile{
+  border-radius:18px;padding:13px;background:rgba(255,255,255,.92);border-color:#e7eaf0;
+}
+.panel-tile:hover{box-shadow:var(--shadow-lg)}
+.panel-tile img{width:58px;height:58px;border:0;border-radius:14px}
+.panel-tile-body h3{font-size:.96rem}
+.panel-tile-desc{font-size:.74rem}
+.panel-tile-badge{background:var(--orange);color:#3b2a00;box-shadow:0 4px 10px rgba(255,183,3,.2)}
+.nextday-wrap{margin:24px 0 8px}
+.btn-nextday{min-height:48px;padding:13px 30px;border-radius:999px}
+nav.bottombar{
+  border-top:1px solid rgba(255,255,255,.08);background:rgba(15,23,42,.96);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);padding-top:4px;box-shadow:0 -8px 30px rgba(16,24,40,.14);
+}
+nav.bottombar button{font-size:.61rem;color:#94a3b8;padding:8px 4px 8px}
+nav.bottombar button .ic{width:24px;height:24px;border-radius:9px}
+nav.bottombar button.active{background:rgba(255,255,255,.06);border-top:0;color:#fff;padding-top:8px}
+nav.bottombar button.active .ic{box-shadow:0 0 0 2px var(--orange)}
+.toast{border-radius:13px;box-shadow:0 12px 35px rgba(0,0,0,.25);backdrop-filter:blur(10px)}
+.modal-backdrop{background:rgba(15,23,42,.62);backdrop-filter:blur(5px)}
+.modal-box{border-radius:20px;padding:20px;box-shadow:0 25px 70px rgba(0,0,0,.28)}
+.busybar{background:rgba(15,23,42,.97);backdrop-filter:blur(12px)}
+.map-svg{border-radius:16px}
+.kicker{letter-spacing:.07em;text-transform:uppercase;font-size:.62rem;font-weight:800;color:#98a2b3}
+.empty{
+  background:rgba(255,255,255,.65);border:1px dashed #d9dee7;border-radius:18px;
+  padding:32px 18px;color:#7b8797;
+}
+@media(max-width:600px){
+  main{padding:12px 11px 96px}
+  .titlerow{padding:12px 12px 10px}
+  .statbar{padding:0 11px;gap:5px}
+  .statbar .stat{padding:8px 5px}
+  .statbar .lbl{font-size:.56rem}
+  .statbar b{font-size:.82rem}
+  .market-search{grid-template-columns:1fr !important}
+  .thumb{width:82px;height:66px}
+  .hero{height:215px;border-radius:16px}
+  .detail-title{font-size:1.2rem}
+  .detail-price{font-size:1.45rem}
+}
+@media(min-width:800px){
+  .listrow{min-height:92px}
+  .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
