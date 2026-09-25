@@ -1,7 +1,7 @@
 import { CITIES, CITY_COORDS } from '../data/constants.js';
 
 var SVG_NS = 'http://www.w3.org/2000/svg';
-var REAL_MAP_URL = '../../assets/turkey-map.svg';
+var REAL_MAP_URL = './assets/turkey-map.svg';
 var realMapPromise = null;
 
 export function el(tag, attrs){
