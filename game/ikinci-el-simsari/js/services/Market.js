@@ -181,7 +181,7 @@ export var Market = {
       ai.sellerType=ai.sellerType==='galeri'?'galeri':'sahibinden';
       listings.push(new Car(ai));
     });
-    var carCount = rnd(4,6), arsaCount = rnd(2,3), shopCount = rnd(1,2);
+    var carCount = rnd(9,13), arsaCount = rnd(4,6), shopCount = rnd(2,3);
     for(var i=0;i<carCount;i++) listings.push(this.makeCar());
     for(var j=0;j<arsaCount;j++) listings.push(this.makeArsa());
     for(var k=0;k<shopCount;k++) listings.push(this.makeShop());
