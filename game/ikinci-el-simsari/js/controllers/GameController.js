@@ -44,6 +44,8 @@ export var Game = {
     listingSort: "varsayilan",
     priceMin: "",
     priceMax: "",
+    searchText: "",
+    cityFilter: "hepsi",
     openDetailId: null,
     openShopId: null,
     openMessageThreadItemId: null,
@@ -141,6 +143,7 @@ export var Game = {
     BilancoDialog.init();
     OperationManager.init();
     this.state.listings = Market.refreshListings();
+    this.state.listings.forEach(function(l){ l.createdDay = 1; });
     this.state.partsMarket = Market.refreshPartsMarket();
     this.state.marketEvent = this.eventForDay(this.state.day);
     this.ensureDailyTasks();
@@ -875,7 +878,9 @@ export var Game = {
       // Favorilenen ilanlar günlük yenilemede kaybolmasın diye korunur,
       // yeni ilan havuzunun başına eklenir.
       var keptFavorites = state.listings.filter(function(l){ return l.favorite; });
-      state.listings = keptFavorites.concat(Market.refreshListings());
+      var freshListings = Market.refreshListings();
+      freshListings.forEach(function(l){ l.createdDay = state.day; });
+      state.listings = keptFavorites.concat(freshListings);
       state.partsMarket = Market.refreshPartsMarket();
 
       // ---- Kargoyla sipariş edilmiş parçalar — süresi dolanlar ulaşır ----
