@@ -186,6 +186,12 @@ export var MesajlarView = {
     h2.className = 'section';
     h2.style.margin = '0';
     h2.textContent = item.title;
+    h2.style.cursor = 'pointer';
+    h2.title = 'İlanı aç';
+    h2.onclick = function(){ state.openMessageThreadItemId = null; state.openDetailId = item.id; state.tab = 'listings'; Game.render(); };
+    thumb.style.cursor = 'pointer';
+    thumb.title = 'İlanı aç';
+    thumb.onclick = function(){ state.openMessageThreadItemId = null; state.openDetailId = item.id; state.tab = 'listings'; Game.render(); };
     head.appendChild(h2);
     container.appendChild(head);
 
