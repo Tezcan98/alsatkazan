@@ -9,14 +9,14 @@ function openDb(){
     var req=indexedDB.open(DB_NAME,DB_VERSION);
     req.onupgradeneeded=function(){var db=req.result;if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE);};
     req.onsuccess=function(){resolve(req.result)};req.onerror=function(){reject(req.error)};
-  }); return dbPromise;
+  });return dbPromise;
 }
 async function localGet(){var db=await openDb();return new Promise(function(resolve,reject){var r=db.transaction(STORE,'readonly').objectStore(STORE).get('guest');r.onsuccess=function(){resolve(r.result||null)};r.onerror=function(){reject(r.error)}})}
 async function localPut(v){var db=await openDb();return new Promise(function(resolve,reject){var tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(v,'guest');tx.oncomplete=function(){resolve()};tx.onerror=function(){reject(tx.error)}})}
 function revive(x){
   if(!x)return null;
   var o=x.category==='araba'?new Car(x):x.category==='arsa'?new Land(x):x.category==='dukkan'?new Shop(x):Object.assign({},x);
-  Object.assign(o,x); return o;
+  Object.assign(o,x);return o;
 }
 function snapshot(game){
   var s=JSON.parse(JSON.stringify(game.state));
