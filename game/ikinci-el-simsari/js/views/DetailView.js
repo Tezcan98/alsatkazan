@@ -167,23 +167,67 @@ export var DetailView = {
       }
     }
 
+    if(item.category==='araba' && item.tramerDone){
+      var tramerCard = document.createElement('div');
+      tramerCard.className = 'card';
+      tramerCard.style.marginTop = '10px';
+      tramerCard.style.borderColor = '#5b8def';
+      var tk = document.createElement('div');
+      tk.className = 'kicker';
+      tk.textContent = 'TRAMER SONUCU';
+      tramerCard.appendChild(tk);
+      var tramerFindings = item.tramerFindings || [];
+      var tramerText = document.createElement('div');
+      tramerText.style.marginTop = '5px';
+      tramerText.textContent = tramerFindings.length
+        ? tramerFindings.length + ' kayıt bulundu. Satıcının kaporta işaretleriyle karşılaştırıldı.'
+        : 'Kayıtlı ağır hasar sonucu bulunmadı.';
+      tramerCard.appendChild(tramerText);
+      var tramerMismatch = Game.tramerDiscrepancy(item);
+      if(tramerMismatch.length && !item.owned){
+        var tm = document.createElement('div');
+        tm.style.marginTop='7px';
+        tm.textContent = tramerMismatch.map(function(f){
+          var part = item.partStatus && f.partKey ? item.partStatus[f.partKey] : 'orijinal';
+          return f.label + ' — satıcı şemada bu bölümü işaretlememiş.';
+        }).join(' ');
+        tramerCard.appendChild(tm);
+        var tb = document.createElement('button');
+        tb.className='btn-orange btn-sm';
+        tb.style.marginTop='8px';
+        tb.textContent=item.tramerNegotiationDone?'TRAMER farkıyla pazarlık yapıldı':'TRAMER farkıyla pazarlık yap';
+        tb.disabled=item.tramerNegotiationDone || busy;
+        tb.onclick=function(){Game.negotiateTramerDiscrepancy(item.id);};
+        tramerCard.appendChild(tb);
+      }
+      body.appendChild(tramerCard);
+    }
+
     var actions = document.createElement('div');
     actions.className = 'action-row';
     if(!item.owned){
-      if(item.category!=='dukkan' && !item.ekspertizDone){
-        var insDesc = TransactionManager.inspection(player, item);
-        var inspectionHere = !item.location || item.location === player.currentCity;
-        var insBtn = document.createElement('button');
-        insBtn.className = 'btn-ghost';
-        insBtn.textContent = 'Ekspertiz Yaptır (' + fmt(insDesc.cost) + ')';
-        insBtn.disabled = busy || !inspectionHere;
-        insBtn.onclick = function(){ Game.doInspect(item.id); };
-        actions.appendChild(insBtn);
-        if(!inspectionHere){
-          var cityNote = document.createElement('div');
-          cityNote.className = 'desc-note'; cityNote.style.width='100%'; cityNote.style.fontStyle='normal';
-          cityNote.textContent = 'Ekspertiz yerinde yapılır. Önce ' + item.location + ' şehrine gitmelisin.';
-          actions.appendChild(cityNote);
+      if(item.category!=='dukkan'){
+        if(!item.ekspertizDone){
+          var insDesc = TransactionManager.inspection(player, item);
+          var inspectionHere = !item.location || item.location === player.currentCity;
+          var insBtn = document.createElement('button');
+          insBtn.className = 'btn-ghost';
+          insBtn.textContent = 'Ekspertiz Yaptır (' + fmt(insDesc.cost) + ')';
+          insBtn.disabled = busy || !inspectionHere;
+          insBtn.onclick = function(){ Game.doInspect(item.id); };
+          actions.appendChild(insBtn);
+          if(!inspectionHere){
+            var cityNote = document.createElement('div');
+            cityNote.className = 'desc-note'; cityNote.style.width='100%'; cityNote.style.fontStyle='normal';
+            cityNote.textContent = 'Ekspertiz yerinde yapılır. Önce ' + item.location + ' şehrine gitmelisin.';
+            actions.appendChild(cityNote);
+          }
+        } else {
+          var doneBtn = document.createElement('button');
+          doneBtn.className='btn-ghost';
+          doneBtn.textContent='✓ Ekspertiz Tamamlandı';
+          doneBtn.disabled=true;
+          actions.appendChild(doneBtn);
         }
       }
       if(item.category==='araba' && !item.tramerDone){
