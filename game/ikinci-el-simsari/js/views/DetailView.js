@@ -138,6 +138,31 @@ export var DetailView = {
       }
     }
 
+    if(item.ekspertizDone && item.inspectionReport){
+      var report = document.createElement('div');
+      report.className='card';
+      report.style.marginTop='10px';
+      report.style.borderColor='#2f855a';
+      var rk=document.createElement('div'); rk.className='kicker'; rk.textContent='EKSPERTİZ RAPORU'; report.appendChild(rk);
+      var rt=document.createElement('div'); rt.style.marginTop='6px';
+      var visibleCount=item.inspectionReport.visibleFaults.length;
+      rt.textContent = visibleCount
+        ? visibleCount+' tespit edilen sorun bulundu.'
+        : 'İncelenen alanlarda tespit edilen bir sorun bulunmadı.';
+      report.appendChild(rt);
+      if(visibleCount){
+        var rl=document.createElement('ul'); rl.className='fault-list';
+        item.inspectionReport.visibleFaults.forEach(function(label){var li=document.createElement('li');li.textContent=label;rl.appendChild(li);});
+        report.appendChild(rl);
+      }
+      if(item.inspectionReport.missedCount>0){
+        var rn=document.createElement('div'); rn.className='desc-note'; rn.style.fontStyle='normal';
+        rn.textContent=item.inspectionReport.missedCount+' küçük kusur ekspertizde gözden kaçmış olabilir.';
+        report.appendChild(rn);
+      }
+      body.appendChild(report);
+    }
+
     if(item.inspected){
       // Sahip değilsen ekspertizin kaçırdığı (hidden) arızalar gösterilmez —
       // bunlar satın aldıktan sonra "kazık" olarak ortaya çıkabilir.
