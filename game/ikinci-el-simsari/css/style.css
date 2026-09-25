@@ -178,3 +178,5 @@ nav.bottombar button.active .ic{box-shadow:0 0 0 2px var(--orange)}
 
 .brand-subtitle{font-size:.65rem;color:#98a2b3;margin-top:2px;letter-spacing:.01em}
 @media(max-width:600px){.brand-subtitle{display:none}}
+
+.auth-backdrop{display:flex;align-items:center;justify-content:center;padding:18px;z-index:100}.auth-box{width:min(430px,100%);position:relative}.auth-close{position:absolute;right:12px;top:10px}.auth-field{display:block;margin:10px 0}.auth-field span{display:block;font-size:.68rem;font-weight:800;margin-bottom:4px}.auth-field input{width:100%;height:42px;border:1px solid var(--border);border-radius:10px;padding:0 10px;font:inherit}.auth-actions{display:flex;gap:8px;margin-top:12px}.auth-actions>*{flex:1}.auth-note,.auth-msg{font-size:.75rem;color:var(--ink-soft);line-height:1.5}.auth-link{background:none;border:0;color:var(--link);padding:7px 0}.auth-cloud{padding:10px;border:1px solid var(--border);border-radius:12px;background:#f7f9fb;margin:10px 0;font-size:.8rem}.account-card{margin-bottom:12px}
