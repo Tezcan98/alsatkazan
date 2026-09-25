@@ -10,6 +10,7 @@ import {
   PARTS_CITY_VARIANCE_MIN, PARTS_CITY_VARIANCE_MAX,
   SELLER_NAMES, GALERI_NAMES, GALERI_CAR_CHANCE
 } from '../data/constants.js';
+import { AI_LISTINGS } from '../data/ai-listings.js';
 
 // =====================================================================
 //  PAZAR — ilan ve yedek parça üretimi
@@ -84,11 +85,16 @@ export var Market = {
     var askingPrice = Math.max(165000, Math.round(askingBase*noise));
 
     var carDef = pick(CAR_MODELS);
+    var titleTag;
+    if(isNaN(year)) titleTag='Temiz';
+    else if(faults.some(function(f){return f.heavy;})) titleTag='Ağır Hasar Kayıtlı';
+    else if(partStatus && Object.keys(partStatus).filter(function(k){return partStatus[k]!=='orijinal';}).length===0) titleTag=(Math.random()<0.55?'İlk Sahibinden · Temiz':'Hatasız · Temiz');
+    else titleTag=pick(['İlk Sahibinden','Temiz Aile Aracı','Masrafsız · Temiz','Düşük KM · Temiz','Bakımlı · Temiz']);
     // ---- Satıcı kimliği: bir kısmı bireysel satıcı, bir kısmı (galeriler)
     // birden fazla aracı aynı anda satan sabit bayii isimlerinden biri ----
     var isGaleri = Math.random() < GALERI_CAR_CHANCE;
     return new Car({
-      title: year + " " + carDef.brand + " " + carDef.model,
+      title: titleTag + ' — ' + year + ' ' + carDef.brand + ' ' + carDef.model,
       brand: carDef.brand,
       year: year, km: kmBase, trans: pick(TRANS), fuel: pick(FUEL), body: pick(BODY), color: pick(COLORS),
       location: pick(CITIES),
@@ -98,6 +104,16 @@ export var Market = {
       chassisSuffix: String(rnd(1000,10000)),
       sellerName: isGaleri ? null : pick(SELLER_NAMES),
       galeriName: isGaleri ? pick(GALERI_NAMES) : null,
+      sellerType: isGaleri ? 'galeri' : 'sahibinden',
+      sellerMemberYears: isGaleri ? rnd(3,18) : rnd(2,12),
+      sellerSalesCount: isGaleri ? rnd(45,620) : rnd(1,34),
+      sellerVerified: Math.random() < 0.72,
+      ownerCount: rnd(1,4),
+      damageRecord: Math.random() < 0.18 ? rnd(15000,380000) : 0,
+      heavyDamage: faults.some(function(f){return f.heavy;}) || Math.random() < 0.07,
+      damageRecordNote: Math.random() < 0.18 ? 'Hasar kaydı mevcut — ekspertiz/TRAMER ile doğrulanmalı.' : 'Hasar kaydı görünmüyor.',
+      maintenanceHistory: Math.random() < 0.55 ? 'Düzenli bakım' : 'Bakım geçmişi kısmi',
+      sellerProfileLabel: isGaleri ? 'Kurumsal galeri' : 'Bireysel satıcı',
       trueValue: baseValue, askingPrice: askingPrice, faults: faults, sellerHonesty: Math.random()
     });
   },
@@ -153,6 +169,18 @@ export var Market = {
 
   refreshListings: function(){
     var listings = [];
+    // Zamanlanmış Gemini üretimi varsa, bunları normal pazar ilanlarıyla harmanla.
+    // Üretim başarısız olsa bile yerel prosedürel pazar çalışmaya devam eder.
+    (AI_LISTINGS || []).slice(0, 8).forEach(function(raw){
+      if(!raw || !raw.brand || !raw.model) return;
+      var ai = Object.assign({}, raw);
+      ai.category='araba';
+      ai.faults=Array.isArray(ai.faults)?ai.faults:[];
+      ai.trueValue=Number(ai.trueValue||ai.askingPrice||500000);
+      ai.askingPrice=Number(ai.askingPrice||ai.trueValue);
+      ai.sellerType=ai.sellerType==='galeri'?'galeri':'sahibinden';
+      listings.push(new Car(ai));
+    });
     var carCount = rnd(4,6), arsaCount = rnd(2,3), shopCount = rnd(1,2);
     for(var i=0;i<carCount;i++) listings.push(this.makeCar());
     for(var j=0;j<arsaCount;j++) listings.push(this.makeArsa());

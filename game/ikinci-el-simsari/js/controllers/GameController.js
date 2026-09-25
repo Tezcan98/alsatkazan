@@ -208,6 +208,11 @@ export var Game = {
     var self = this, player = this.player;
     var item = this.findAny(id);
     if(!item || item.ekspertizDone) return;
+    // Ekspertiz yerinde yapılır: ilan hangi şehirdeyse oyuncu o şehirde olmalı.
+    if(item.location && item.location !== player.currentCity){
+      toast('Ekspertiz için önce ' + item.location + ' şehrine gitmelisin.');
+      return;
+    }
     var desc = TransactionManager.inspection(player, item);
     this.perform(desc, function(){
       player.spend(desc.cost);
@@ -389,6 +394,26 @@ export var Game = {
     return pad(d) + '/' + pad(m) + '/' + y;
   },
 
+  doRentShop: function(id){
+    var self=this, state=this.state, player=this.player;
+    var item=this.findListing(id);
+    if(!item || item.category!=='dukkan') return;
+    var desc=TransactionManager.rentShop(player,item);
+    this.perform(desc,function(){
+      var idx=state.listings.findIndex(function(l){return l.id===id;});
+      if(idx<0) return;
+      state.listings.splice(idx,1);
+      player.spend(desc.cost);
+      item.owned=true; item.purchasePrice=0; item.leased=true; item.mode='kendim';
+      item.shopId=null; item.slots=[]; item.upgrades=[]; item.rentMult=1; item.passiveBonus=0; item.saleBonus=1;
+      state.shops.push(item);
+      self.addLog('Dükkan kiralandı: '+item.title+' — aylık kira '+fmt(item.rent),'neg');
+      toast('Dükkan kiralandı. Artık kapasite ve vitrinini kullanabilirsin.');
+      state.openDetailId=null;
+      self.render();
+    });
+  },
+
   doBuy: function(id){
     var self = this, state = this.state, player = this.player;
     var item = this.findListing(id);
@@ -400,6 +425,16 @@ export var Game = {
       return;
     }
     var hiddenLoss = item.faults.filter(function(f){return f.hidden;}).reduce(function(s,f){return s+f.loss;},0);
+    // Dükkan satın alımı kapasite açar; araç/arsa alımları ise mevcut
+    // fiziksel depolama kapasitesini aşamaz.
+    if(item.category!=='dukkan'){
+      var usedCars = state.inventory.filter(function(i){return i.category==='araba';}).length;
+      var usedLand = state.inventory.filter(function(i){return i.category==='arsa';}).length;
+      var carCap = player.garageCapacity + state.shops.filter(function(s){return s.shopType==='galeri' && s.mode==='kendim';}).reduce(function(n,s){return n+s.capacity;},0);
+      var landCap = player.warehouseCapacity + state.shops.filter(function(s){return s.shopType==='emlak' && s.mode==='kendim';}).reduce(function(n,s){return n+s.capacity;},0);
+      if(item.category==='araba' && usedCars >= carCap){ toast('Garaj kapasitesi dolu ('+usedCars+'/'+carCap+'). Galeri veya daha büyük depo al.'); return; }
+      if(item.category==='arsa' && usedLand >= landCap){ toast('Depo/arşiv kapasitesi dolu ('+usedLand+'/'+landCap+'). Emlak ofisi veya depo kapasitesi artır.'); return; }
+    }
     var desc = TransactionManager.purchase(player, item);
     this.perform(desc, function(){
       var idx = state.listings.findIndex(function(l){return l.id===id;});
@@ -801,6 +836,8 @@ export var Game = {
     var m = state.partsMarket.find(function(p){return p.brand===brand && p.tag===tag && p.city===city;});
     if(!m) return;
     if(city === player.currentCity){
+      var totalParts = Object.keys(state.parts).reduce(function(sum,k){ return sum + (state.parts[k]||0); }, 0);
+      if(totalParts >= player.partsCapacity){ toast('Yedek parça depon dolu ('+totalParts+'/'+player.partsCapacity+'). Galeri/depo kapasiteni büyüt.'); return; }
       var desc = TransactionManager.buyPart(player, brand, m);
       this.perform(desc, function(){
         player.spend(desc.cost);
@@ -810,6 +847,8 @@ export var Game = {
         self.render();
       });
     } else {
+      var totalParts2 = Object.keys(state.parts).reduce(function(sum,k){ return sum + (state.parts[k]||0); }, 0) + state.pendingParts.length;
+      if(totalParts2 >= player.partsCapacity){ toast('Yedek parça depon dolu ('+totalParts2+'/'+player.partsCapacity+').'); return; }
       var est = this.cargoEstimate(city);
       var cdesc = TransactionManager.buyPartCargo(player, brand, m, est.shipping, est.days);
       this.perform(cdesc, function(){

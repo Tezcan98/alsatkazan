@@ -54,12 +54,19 @@ Car.prototype.specRows = function(){
     ['Yakıt', this.fuel],
     ['Kasa Tipi', this.body],
     ['Renk', this.color],
+    ['Sahiplik', (this.ownerCount||1) + '. sahibinden'],
+    ['Hasar Kaydı', this.damageRecord ? fmt(this.damageRecord) : 'Hasar kaydı görünmüyor'],
+    ['Ağır Hasarlı', this.heavyDamage ? 'Evet' : 'Hayır'],
+    ['Bakım', this.maintenanceHistory || 'Belirtilmemiş'],
     ['Konum', this.location]
   ];
   if(this.owned) rows.push(['Kasko', this.insured ? 'Sigortalı' : 'Sigortasız']);
   return rows;
 };
-Car.prototype.metaLine = function(){ return this.km.toLocaleString('tr-TR') + ' km · ' + this.trans + ' · ' + this.location; };
+Car.prototype.metaLine = function(){
+  var seller = this.sellerType==='galeri' ? (this.galeriName || 'Galeri') : (this.ownerCount||1) + '. sahibinden';
+  return this.km.toLocaleString('tr-TR') + ' km · ' + this.trans + ' · ' + seller + ' · ' + this.location;
+};
 
 export function Land(base){
   Listing.call(this, Object.assign({category:'arsa'}, base));

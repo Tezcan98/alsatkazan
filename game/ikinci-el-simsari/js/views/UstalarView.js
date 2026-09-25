@@ -26,6 +26,8 @@ export var UstalarView = {
     var partsBox = document.createElement('div');
     partsBox.className = 'card';
     partsBox.style.marginBottom = '16px';
+    var partsTotal=Object.keys(state.parts).reduce(function(sum,k){return sum+(state.parts[k]||0);},0)+state.pendingParts.length;
+    var partsCap=document.createElement('div'); partsCap.className='badge'; partsCap.textContent='Parça deposu: '+partsTotal+'/'+player.partsCapacity; partsBox.appendChild(partsCap);
 
     var pHead = document.createElement('div');
     pHead.style.display = 'flex'; pHead.style.gap = '10px'; pHead.style.alignItems = 'center'; pHead.style.marginBottom = '8px';

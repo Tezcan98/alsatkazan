@@ -24,6 +24,12 @@ export function Player(){
   // Seyahat aracı: garajdaki bir arabanın id'si — seçiliyse seyahatlerde
   // "o araçla gidiliyor" sayılır ve km'si artar (bkz. GarageView, Game.doTravel)
   this.travelCarId = null;
+  // Fiziksel kapasite: başlangıçta küçük bir garaj/depo ile başlarsın.
+  // Galeri satın aldıkça araç depolama kapasiten artar; yedek parça rafı
+  // ise ayrı ve sınırlıdır.
+  this.garageCapacity = 3;
+  this.warehouseCapacity = 2;
+  this.partsCapacity = 10;
   // Meta-ilerleme: lig, seri ve günlük görevler
   this.xp = 0;
   this.dealStreak = 0;

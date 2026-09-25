@@ -371,6 +371,11 @@ export const CARGO_COST_PER_UNIT = 4;
 export const CARGO_MIN_COST = 80;
 export const CARGO_DELIVERY_DAYS_MIN = 1;
 export const CARGO_DELIVERY_DAYS_MAX = 3;
+// ---- Depo / garaj kapasitesi ----
+// Başlangıçta oyuncunun sınırlı araç ve yedek parça depolama alanı vardır.
+// Galeri satın alındığında o galerinin kapasitesi toplam araç depolamaya eklenir.
+export const START_GARAGE_CAPACITY = 3;
+export const START_PARTS_CAPACITY = 10;
 
 // ---- Günlük Yaşam Maliyeti / Ev Kirası / Pansiyon ----
 // Sahip olma masraflarından (CAR_DAILY_HOLDING_COST vb.) bağımsız, kişisel
