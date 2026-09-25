@@ -28,6 +28,7 @@ export function Player(){
   // Galeri satın aldıkça araç depolama kapasiten artar; yedek parça rafı
   // ise ayrı ve sınırlıdır.
   this.garageCapacity = 3;
+  this.warehouseCapacity = 2;
   this.partsCapacity = 10;
   // Meta-ilerleme: lig, seri ve günlük görevler
   this.xp = 0;
