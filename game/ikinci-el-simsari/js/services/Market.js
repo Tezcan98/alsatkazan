@@ -75,7 +75,7 @@ export var Market = {
     }
     var partStatus = this.makePartStatus(faults);
     if(Math.random() < 0.10){
-      faults.push({ tag:HEAVY_FAULT.tag, label:HEAVY_FAULT.label, loss:rnd(HEAVY_FAULT.loss[0],HEAVY_FAULT.loss[1]), repairCost:rnd(HEAVY_FAULT.repair[0],HEAVY_FAULT.repair[1]), fixed:false, heavy:true, hidden:true });
+      faults.push({ tag:HEAVY_FAULT.tag, label:HEAVY_FAULT.label, partKey:pick(CAR_PART_DEFS).key, loss:rnd(HEAVY_FAULT.loss[0],HEAVY_FAULT.loss[1]), repairCost:rnd(HEAVY_FAULT.repair[0],HEAVY_FAULT.repair[1]), fixed:false, heavy:true, hidden:true });
     }
     var yearFactor = 0.55 + (year-2011) * 0.045;
     var baseValue = Math.round(rnd(935000,1430000) * yearFactor);
