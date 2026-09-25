@@ -180,3 +180,62 @@ nav.bottombar button.active .ic{box-shadow:0 0 0 2px var(--orange)}
 @media(max-width:600px){.brand-subtitle{display:none}}
 
 .auth-backdrop{display:flex;align-items:center;justify-content:center;padding:18px;z-index:100}.auth-box{width:min(430px,100%);position:relative}.auth-close{position:absolute;right:12px;top:10px}.auth-field{display:block;margin:10px 0}.auth-field span{display:block;font-size:.68rem;font-weight:800;margin-bottom:4px}.auth-field input{width:100%;height:42px;border:1px solid var(--border);border-radius:10px;padding:0 10px;font:inherit}.auth-actions{display:flex;gap:8px;margin-top:12px}.auth-actions>*{flex:1}.auth-note,.auth-msg{font-size:.75rem;color:var(--ink-soft);line-height:1.5}.auth-link{background:none;border:0;color:var(--link);padding:7px 0}.auth-cloud{padding:10px;border:1px solid var(--border);border-radius:12px;background:#f7f9fb;margin:10px 0;font-size:.8rem}.account-card{margin-bottom:12px}
+
+
+/* Harita / seyahat UX */
+.map-location-card{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:0 0 10px;
+  padding:12px 14px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:linear-gradient(135deg,#fffdf2,#f7f9fb);
+  box-shadow:0 3px 12px rgba(24,35,45,.06);
+}
+.map-location-pin{
+  width:38px;
+  height:38px;
+  flex:0 0 38px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:12px;
+  background:#fff3bd;
+  font-size:1.2rem;
+}
+.map-location-kicker{
+  font-size:.62rem;
+  font-weight:900;
+  letter-spacing:.08em;
+  color:#8a6500;
+}
+.map-location-city{
+  margin-top:1px;
+  font-size:1.05rem;
+  font-weight:900;
+  color:var(--ink);
+}
+.map-location-help{
+  margin-top:2px;
+  font-size:.7rem;
+  color:var(--ink-soft);
+}
+.travel-progress-card{
+  border-color:#d19a00;
+  background:linear-gradient(135deg,#fffdf2,#ffffff);
+}
+.travel-progress-route{
+  margin-top:6px;
+  font-size:1.05rem;
+  font-weight:900;
+  letter-spacing:.01em;
+}
+.travel-progress-hint{
+  margin-top:8px;
+  padding-top:8px;
+  border-top:1px dashed var(--border);
+  font-size:.68rem;
+  color:var(--ink-soft);
+}
