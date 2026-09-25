@@ -232,6 +232,8 @@ export var Game = {
       self.addLog('Ekspertiz yaptırıldı: ' + item.title + ' — ' + fmt(desc.cost), 'neg');
       if(missedCount>0) self.addLog('(Ekspertizci bir şeyi gözden kaçırmış olabilir — satın almadan emin olamazsın.)', '');
       player.addXp('ekspertiz', 25);
+      self.progressTask('inspect',1);
+      player.addMetaXp(12);
       self.checkAchievements();
       self.render();
     });
