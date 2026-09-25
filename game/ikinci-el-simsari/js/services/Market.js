@@ -10,6 +10,7 @@ import {
   PARTS_CITY_VARIANCE_MIN, PARTS_CITY_VARIANCE_MAX,
   SELLER_NAMES, GALERI_NAMES, GALERI_CAR_CHANCE
 } from '../data/constants.js';
+import { AI_LISTINGS } from '../data/ai-listings.js';
 
 // =====================================================================
 //  PAZAR — ilan ve yedek parça üretimi
@@ -168,6 +169,18 @@ export var Market = {
 
   refreshListings: function(){
     var listings = [];
+    // Zamanlanmış Gemini üretimi varsa, bunları normal pazar ilanlarıyla harmanla.
+    // Üretim başarısız olsa bile yerel prosedürel pazar çalışmaya devam eder.
+    (AI_LISTINGS || []).slice(0, 8).forEach(function(raw){
+      if(!raw || !raw.brand || !raw.model) return;
+      var ai = Object.assign({}, raw);
+      ai.category='araba';
+      ai.faults=Array.isArray(ai.faults)?ai.faults:[];
+      ai.trueValue=Number(ai.trueValue||ai.askingPrice||500000);
+      ai.askingPrice=Number(ai.askingPrice||ai.trueValue);
+      ai.sellerType=ai.sellerType==='galeri'?'galeri':'sahibinden';
+      listings.push(new Car(ai));
+    });
     var carCount = rnd(4,6), arsaCount = rnd(2,3), shopCount = rnd(1,2);
     for(var i=0;i<carCount;i++) listings.push(this.makeCar());
     for(var j=0;j<arsaCount;j++) listings.push(this.makeArsa());
