@@ -172,12 +172,19 @@ export var DetailView = {
     if(!item.owned){
       if(item.category!=='dukkan' && !item.ekspertizDone){
         var insDesc = TransactionManager.inspection(player, item);
+        var inspectionHere = !item.location || item.location === player.currentCity;
         var insBtn = document.createElement('button');
         insBtn.className = 'btn-ghost';
         insBtn.textContent = 'Ekspertiz Yaptır (' + fmt(insDesc.cost) + ')';
-        insBtn.disabled = busy;
+        insBtn.disabled = busy || !inspectionHere;
         insBtn.onclick = function(){ Game.doInspect(item.id); };
         actions.appendChild(insBtn);
+        if(!inspectionHere){
+          var cityNote = document.createElement('div');
+          cityNote.className = 'desc-note'; cityNote.style.width='100%'; cityNote.style.fontStyle='normal';
+          cityNote.textContent = 'Ekspertiz yerinde yapılır. Önce ' + item.location + ' şehrine gitmelisin.';
+          actions.appendChild(cityNote);
+        }
       }
       if(item.category==='araba' && !item.tramerDone){
         var tramerDesc = TransactionManager.tramerQuery(player, item);
