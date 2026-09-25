@@ -3,6 +3,8 @@ import { Game } from '../controllers/GameController.js';
 import { SKILL_LABELS } from '../data/constants.js';
 import { IMG } from '../data/images.js';
 import { ACHIEVEMENTS } from '../controllers/achievements.js';
+import { AuthService } from '../services/AuthService.js';
+import { AuthView } from './AuthView.js';
 
 // =====================================================================
 //  PROFİLİM (Görünüm katmanı) — Kontrol Paneli alt sayfası
@@ -22,6 +24,13 @@ export var ProfilView = {
     h2.className = 'section';
     h2.textContent = 'Profilim';
     container.appendChild(h2);
+
+    var accountCard=document.createElement('div');
+    accountCard.className='card account-card';
+    var accountTitle=document.createElement('h3'); accountTitle.textContent=AuthService.user?'☁ Bulut hesabı':'💾 Yerel oyun'; accountCard.appendChild(accountTitle);
+    var accountText=document.createElement('div'); accountText.className='kicker'; accountText.textContent=AuthService.user?'İlerlemen hesabına bağlı, başka cihazdan devam edebilirsin.':'Bu cihazda IndexedDB üzerinde kaydedilir. Üye olursan buluta taşınabilir.'; accountCard.appendChild(accountText);
+    var accountBtn=document.createElement('button'); accountBtn.className=AuthService.user?'btn-ghost':'btn-orange'; accountBtn.textContent=AuthService.user?'Hesabımı aç':'Giriş yap / Üye ol'; accountBtn.style.marginTop='10px'; accountBtn.onclick=function(){AuthView.open()}; accountCard.appendChild(accountBtn);
+    container.appendChild(accountCard);
 
     var card = document.createElement('div');
     card.className = 'card';
