@@ -98,6 +98,16 @@ export var Market = {
       chassisSuffix: String(rnd(1000,10000)),
       sellerName: isGaleri ? null : pick(SELLER_NAMES),
       galeriName: isGaleri ? pick(GALERI_NAMES) : null,
+      sellerType: isGaleri ? 'galeri' : 'sahibinden',
+      sellerMemberYears: isGaleri ? rnd(3,18) : rnd(2,12),
+      sellerSalesCount: isGaleri ? rnd(45,620) : rnd(1,34),
+      sellerVerified: Math.random() < 0.72,
+      ownerCount: rnd(1,4),
+      damageRecord: Math.random() < 0.18 ? rnd(15000,380000) : 0,
+      heavyDamage: faults.some(function(f){return f.heavy;}) || Math.random() < 0.07,
+      damageRecordNote: Math.random() < 0.18 ? 'Hasar kaydı mevcut — ekspertiz/TRAMER ile doğrulanmalı.' : 'Hasar kaydı görünmüyor.',
+      maintenanceHistory: Math.random() < 0.55 ? 'Düzenli bakım' : 'Bakım geçmişi kısmi',
+      sellerProfileLabel: isGaleri ? 'Kurumsal galeri' : 'Bireysel satıcı',
       trueValue: baseValue, askingPrice: askingPrice, faults: faults, sellerHonesty: Math.random()
     });
   },
