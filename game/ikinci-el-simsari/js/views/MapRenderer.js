@@ -1,7 +1,7 @@
 import { CITIES, CITY_COORDS } from '../data/constants.js';
 
 var SVG_NS = 'http://www.w3.org/2000/svg';
-var REAL_MAP_URL = 'https://raw.githubusercontent.com/dnomak/svg-turkiye-haritasi/master/index.html';
+var REAL_MAP_URL = '../../assets/turkey-map.svg';
 var realMapPromise = null;
 
 export function el(tag, attrs){
@@ -28,7 +28,7 @@ function loadRealMap(){
   realMapPromise = fetch(REAL_MAP_URL)
     .then(function(r){ if(!r.ok) throw new Error('Turkey SVG alınamadı'); return r.text(); })
     .then(function(html){
-      var doc = new DOMParser().parseFromString(html, 'text/html');
+      var doc = new DOMParser().parseFromString(html, 'image/svg+xml');
       var svg = doc.querySelector('#svg-turkiye-haritasi');
       if(!svg) throw new Error('Turkey SVG bulunamadı');
       return svg;
@@ -152,8 +152,8 @@ export function renderMap(container, opts){
   fallback.appendChild(el('path',{d:TURKEY_PATH,fill:'#eef3ea',stroke:'#9db98f','stroke-width':'1.5','stroke-linejoin':'round'}));
   container.appendChild(fallback);
 
-  // Gerçek 81 il sınırlarını içeren SVG, MIT lisanslı açık kaynak
-  // dnomak/svg-turkiye-haritasi kaynağından yüklenir.
+  // Gerçek 81 il sınırlarını içeren SVG artık oyunun içinde tutuluyor;
+  // harici GitHub/RAW erişimine bağımlı değil.
   loadRealMap().then(function(svg){
     if(svg) installRealMap(container,svg,opts);
   });
