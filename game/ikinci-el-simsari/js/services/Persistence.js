@@ -2,7 +2,7 @@ import { Car, Land, Shop } from '../models/Listing.js';
 import { Player } from '../models/Player.js';
 import { AuthService } from './AuthService.js';
 
-var DB_NAME='alsatkazan-local', DB_VERSION=1, STORE='saves', dbPromise=null, saveTimer=null;
+var DB_NAME='alsatkazan-local', DB_VERSION=1, STORE='saves', dbPromise=null, saveTimer=null, activeGame=null, autosaveStarted=false;
 function openDb(){
   if(dbPromise)return dbPromise;
   dbPromise=new Promise(function(resolve,reject){
@@ -46,7 +46,7 @@ async function serverSave(data){
   if(r.error)throw r.error;
 }
 export var Persistence={
-  init:async function(){await openDb()},
+  init:async function(game){await openDb();activeGame=game;if(!autosaveStarted){autosaveStarted=true;setInterval(function(){if(activeGame)Persistence.save(activeGame)},5000)}},
   hydrate:async function(game){
     var remote=null;
     if(AuthService.user){try{remote=await serverLoad()}catch(e){console.warn('Sunucu kayıt yüklenemedi',e)}}
