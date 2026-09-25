@@ -112,6 +112,32 @@ export var DetailView = {
     descNote.textContent = 'İlan sahibinin beyanıdır, doğruluğu garanti edilmez.';
     body.appendChild(descNote);
 
+    if(item.inspected && !item.owned && item.ekspertizDone){
+      var mismatches = Game.expertDiscrepancy(item);
+      if(mismatches.length){
+        var nego = document.createElement('div');
+        nego.className = 'card';
+        nego.style.marginTop = '10px';
+        nego.style.borderColor = '#e1b12c';
+        var nk = document.createElement('div');
+        nk.className = 'kicker';
+        nk.textContent = 'EKSPERTİZ FARKI';
+        nego.appendChild(nk);
+        var nt = document.createElement('div');
+        nt.style.marginTop = '5px';
+        nt.textContent = 'Satıcının önceki beyanı ile ekspertiz sonucu uyuşmuyor. Bu farkı koz olarak kullanıp fiyatı aşağı çekebilirsin.';
+        nego.appendChild(nt);
+        var nb = document.createElement('button');
+        nb.className = 'btn-orange btn-sm';
+        nb.style.marginTop = '8px';
+        nb.textContent = item.negotiationDone ? 'Pazarlık yapıldı' : 'Ekspertiz farkıyla pazarlık yap';
+        nb.disabled = item.negotiationDone || busy;
+        nb.onclick = function(){ Game.negotiateExpertDiscrepancy(item.id); };
+        nego.appendChild(nb);
+        body.appendChild(nego);
+      }
+    }
+
     if(item.inspected){
       // Sahip değilsen ekspertizin kaçırdığı (hidden) arızalar gösterilmez —
       // bunlar satın aldıktan sonra "kazık" olarak ortaya çıkabilir.
