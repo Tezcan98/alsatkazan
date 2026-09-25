@@ -86,10 +86,35 @@ export var Market = {
 
     var carDef = pick(CAR_MODELS);
     var titleTag;
-    if(isNaN(year)) titleTag='Temiz';
-    else if(faults.some(function(f){return f.heavy;})) titleTag='Ağır Hasar Kayıtlı';
-    else if(partStatus && Object.keys(partStatus).filter(function(k){return partStatus[k]!=='orijinal';}).length===0) titleTag=(Math.random()<0.55?'İlk Sahibinden · Temiz':'Hatasız · Temiz');
-    else titleTag=pick(['İlk Sahibinden','Temiz Aile Aracı','Masrafsız · Temiz','Düşük KM · Temiz','Bakımlı · Temiz']);
+    var affectedParts = partStatus ? Object.keys(partStatus).filter(function(k){return partStatus[k]!=='orijinal';}).length : 0;
+    if(faults.some(function(f){return f.heavy;})){
+      titleTag = pick(['Ağır hasar kaydı var','Hasar geçmişi mevcut','Kayıtlı hasarlı — detaylar ilanda','Geçmişinde hasar var']);
+    } else if(affectedParts===0 && Math.random()<0.28){
+      titleTag = pick(['Hatasız deniyor','Koleksiyonluk kondisyonda','Göz alıcı kondisyon','Temiz kullanılmış','Diri ve bakımlı']);
+    } else if(year>=2020 && kmBase<70000){
+      titleTag = pick(['Düşük kilometre','Şehir içi az kullanılmış','Yeni kasa arayanlara','KM avantajlı','Genç ve diri']);
+    } else {
+      titleTag = pick([
+        'Aileden kalma — satılık',
+        'Hafta sonu aracım',
+        'Şehir içinin pratik otomobili',
+        'İş-güç için kullanıldı',
+        'Uzun yol arkadaşım',
+        'İlk arabasını arayana',
+        'Masrafını bilen alsın',
+        'Yaşına göre diri',
+        'Bakımları aksatılmadı',
+        'Binicisine denk gelsin',
+        'Takas düşünülür',
+        'Acil değil, doğru alıcıya',
+        'Garaj değişikliği nedeniyle',
+        'Yeni araca geçiyorum',
+        'Kullanıcıdan kullanıcıya',
+        'Detaylı bilgi ilanda',
+        'Günlük kullanıldı',
+        'Ekonomik ve hazır'
+      ]);
+    }
     // ---- Satıcı kimliği: bir kısmı bireysel satıcı, bir kısmı (galeriler)
     // birden fazla aracı aynı anda satan sabit bayii isimlerinden biri ----
     var isGaleri = Math.random() < GALERI_CAR_CHANCE;
