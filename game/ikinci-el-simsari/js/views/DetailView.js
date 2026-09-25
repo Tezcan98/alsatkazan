@@ -222,6 +222,14 @@ export var DetailView = {
         buyBtn.disabled = busy || player.balance < item.askingPrice;
         buyBtn.onclick = function(){ Game.doBuy(item.id); };
         actions.appendChild(buyBtn);
+        if(item.category==='dukkan'){
+          var rentBtn = document.createElement('button');
+          rentBtn.className = 'btn-navy';
+          rentBtn.textContent = 'Kirala (' + fmt(Math.round(item.rent * item.rentMult)) + '/ay)';
+          rentBtn.disabled = busy || player.balance < Math.round(item.rent * item.rentMult);
+          rentBtn.onclick = function(){ Game.doRentShop(item.id); };
+          actions.appendChild(rentBtn);
+        }
       }
     } else if(item.forSale){
       var unlistBtn = document.createElement('button');
