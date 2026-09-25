@@ -19,6 +19,8 @@ import {
 } from '../data/constants.js';
 import { ACHIEVEMENTS } from './achievements.js';
 import { generateSellerReply } from '../services/SellerReplyService.js';
+import { Persistence } from '../services/Persistence.js';
+import { AuthService } from '../services/AuthService.js';
 
 // =====================================================================
 //  OYUN DENETLEYİCİSİ (Controller katmanı)
@@ -138,16 +140,24 @@ export var Game = {
     this._dayLedger.income[label] = (this._dayLedger.income[label]||0) + amount;
   },
 
-  init: function(){
+  init: async function(){
     ConfirmDialog.init();
     BilancoDialog.init();
     OperationManager.init();
+    await AuthService.init();
+    await Persistence.init();
+    var restored=await Persistence.hydrate(this);
+    if(restored){
+      this.ensureDailyTasks();
+      return;
+    }
     this.state.listings = Market.refreshListings();
     this.state.listings.forEach(function(l){ l.createdDay = 1; });
     this.state.partsMarket = Market.refreshPartsMarket();
     this.state.marketEvent = this.eventForDay(this.state.day);
     this.ensureDailyTasks();
     this.addLog('Simsarlığa hoş geldin. Kasanla ilan al, incele, tamir ettir, kârına sat.');
+    await Persistence.save(this);
   },
 
   addLog: function(msg, cls){
