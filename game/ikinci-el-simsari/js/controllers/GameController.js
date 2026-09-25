@@ -12,7 +12,7 @@ import {
   CONSTRUCTION_COST_PER_M2, CONSTRUCTION_DAYS_MIN, CONSTRUCTION_DAYS_MAX, CONSTRUCTION_VALUE_MULT,
   CAR_DAILY_HOLDING_COST, ARSA_DAILY_HOLDING_COST, STALE_LISTING_DAYS, STALE_DEPRECIATION_RATE,
   BOOST_DAYS, BOOST_ATTRACT_BONUS, KASKO_DAILY_RATE, KASKO_MIN_DAILY, KASKO_DEDUCTIBLE, KAZA_DAILY_CHANCE,
-  FAULT_POOL_CAR, REPUTATION_MAX_STARS, TRAMER_MISS_CHANCE, TRAMER_KAZA_TYPES,
+  FAULT_POOL_CAR, CAR_PART_DEFS, REPUTATION_MAX_STARS, TRAMER_MISS_CHANCE, TRAMER_KAZA_TYPES,
   CITY_COORDS, TRAVEL_KM_PER_UNIT,
   CARGO_COST_PER_UNIT, CARGO_MIN_COST, CARGO_DELIVERY_DAYS_MIN, CARGO_DELIVERY_DAYS_MAX,
   DAILY_LIVING_COST, DAILY_RENT, PANSIYON_DAILY_COST, AMBIENT_EVENTS
@@ -221,6 +221,12 @@ export var Game = {
       var lightFaults = item.faults.filter(function(f){ return !f.heavy; });
       lightFaults.forEach(function(f){ f.hidden = Math.random() < desc.missChance; });
       var missedCount = lightFaults.filter(function(f){return f.hidden;}).length;
+      item.inspectionReport = {
+        day: state.day,
+        visibleFaults: lightFaults.filter(function(f){return !f.hidden;}).map(function(f){return f.label;}),
+        missedCount: missedCount,
+        totalChecked: lightFaults.length
+      };
       self.addLog('Ekspertiz yaptırıldı: ' + item.title + ' — ' + fmt(desc.cost), 'neg');
       if(missedCount>0) self.addLog('(Ekspertizci bir şeyi gözden kaçırmış olabilir — satın almadan emin olamazsın.)', '');
       player.addXp('ekspertiz', 25);
@@ -273,6 +279,35 @@ export var Game = {
     self.render();
   },
 
+  tramerDiscrepancy: function(item){
+    if(!item || item.category!=='araba' || !item.tramerDone || !item.tramerFindings) return [];
+    return item.tramerFindings.filter(function(f){
+      if(!f.partKey || !item.partStatus) return false;
+      return (item.partStatus[f.partKey] || 'orijinal') === 'orijinal';
+    });
+  },
+
+  negotiateTramerDiscrepancy: function(id){
+    var self=this, player=this.player, item=this.findListing(id);
+    if(!item || item.owned || !item.tramerDone || item.tramerNegotiationDone) return;
+    var mismatches=this.tramerDiscrepancy(item);
+    if(!mismatches.length){ toast('TRAMER sonucu ile satıcının işaretlediği kaporta bilgileri arasında fark bulunamadı.'); return; }
+    var totalLoss=mismatches.reduce(function(sum,f){return sum+(f.loss||0);},0);
+    var skill=player.skillLevel('pazarlik');
+    var discount=clamp(0.05 + skill*0.012 + Math.min(0.10,totalLoss/2500000),0.05,0.22);
+    var reduction=Math.max(3000,Math.round(item.askingPrice*discount/500)*500);
+    var oldPrice=item.askingPrice;
+    item.askingPrice=Math.max(500,item.askingPrice-reduction);
+    item.tramerNegotiationDone=true;
+    item.messages.push(self.stampMsg({from:'me',text:'TRAMER kaydında satıcının işaretlemediği farklı bir hasar bilgisi çıktı. '+fmt(reduction)+' TL aşağıdan teklif ediyorum.'}));
+    item.messages.push(self.stampMsg({from:'seller',text:'TRAMER kaydını gördüm. '+fmt(reduction)+' TL indirimle '+fmt(item.askingPrice)+' TL son fiyatım olsun.'}));
+    player.addXp('pazarlik',22);
+    player.addMetaXp(12);
+    self.addLog('TRAMER farkı üzerinden pazarlık edildi: '+item.title+' — '+fmt(oldPrice)+' → '+fmt(item.askingPrice), 'pos');
+    toast('TRAMER farkı pazarlığa yansıdı: -'+fmt(reduction));
+    self.render();
+  },
+
   // TRAMER: SBM üzerinden resmi kaza kaydı sorgusu — sadece araba, sadece
   // ağır hasar (heavy) kayıtlarını açar, TRAMER_MISS_CHANCE ile bazı
   // kazalar sigortaya bildirilmemiş olabileceğinden görünmeyebilir.
@@ -292,6 +327,9 @@ export var Game = {
         var missed = Math.random() < TRAMER_MISS_CHANCE;
         f.hidden = missed;
         if(!missed) found.push(f);
+      });
+      item.tramerFindings = found.map(function(f){
+        return { label:f.label, partKey:f.partKey || null, loss:f.loss };
       });
 
       var plate = item.plate || self.randomPlateFallback();
@@ -961,10 +999,18 @@ export var Game = {
       toast(state.marketEvent.title+': '+state.marketEvent.desc);
       // Favorilenen ilanlar günlük yenilemede kaybolmasın diye korunur,
       // yeni ilan havuzunun başına eklenir.
-      var keptFavorites = state.listings.filter(function(l){ return l.favorite; });
+      var activeListings = state.listings.filter(function(l){ return !l.owned; });
+      var keptFavorites = activeListings.filter(function(l){ return l.favorite; });
+      var regularKeep = activeListings.filter(function(l){ return !l.favorite && Math.random() < 0.48; });
       var freshListings = Market.refreshListings();
       freshListings.forEach(function(l){ l.createdDay = state.day; });
-      state.listings = keptFavorites.concat(freshListings);
+      // Piyasa tamamen sıfırlanmaz: bazı araç/arsa/dükkan ilanları günlerce kalabilir.
+      // Favoriler kesin korunur; diğer aktif ilanların yaklaşık yarısı döner.
+      var retained = keptFavorites.concat(regularKeep);
+      var seen = {};
+      retained.forEach(function(l){ seen[l.id]=true; });
+      var merged = retained.concat(freshListings.filter(function(l){ return !seen[l.id]; }));
+      state.listings = merged.slice(0, 32);
       state.partsMarket = Market.refreshPartsMarket();
 
       // ---- Kargoyla sipariş edilmiş parçalar — süresi dolanlar ulaşır ----
