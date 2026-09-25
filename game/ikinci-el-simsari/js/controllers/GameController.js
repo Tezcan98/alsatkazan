@@ -15,7 +15,7 @@ import {
   FAULT_POOL_CAR, REPUTATION_MAX_STARS, TRAMER_MISS_CHANCE, TRAMER_KAZA_TYPES,
   CITY_COORDS, TRAVEL_KM_PER_UNIT,
   CARGO_COST_PER_UNIT, CARGO_MIN_COST, CARGO_DELIVERY_DAYS_MIN, CARGO_DELIVERY_DAYS_MAX,
-  DAILY_LIVING_COST, DAILY_RENT, PANSIYON_DAILY_COST
+  DAILY_LIVING_COST, DAILY_RENT, PANSIYON_DAILY_COST, AMBIENT_EVENTS
 } from '../data/constants.js';
 import { ACHIEVEMENTS } from './achievements.js';
 import { generateSellerReply } from '../services/SellerReplyService.js';
@@ -59,7 +59,8 @@ export var Game = {
     // Otobüs mod seçim panelini gösterir (bkz. MapView.renderTravelPanel).
     travelTargetCity: null,
     // İlanlar sekmesindeki Liste/Harita görünüm anahtarı (bkz. ListingsView).
-    listingViewMode: 'list'
+    listingViewMode: 'list',
+    marketEvent: null
   },
   player: new Player(),
   render: function(){ /* main.js tarafından değiştirilir */ },
@@ -70,6 +71,72 @@ export var Game = {
   _tramerCaughtCount: 0,
   _msgSeq: 0,
   stampMsg: function(m){ m.ts = ++this._msgSeq; return m; },
+
+  // ---- Meta oyun: günlük görevler + lig + piyasa olayı ----
+  ensureDailyTasks: function(){
+    var p=this.player, d=this.state.day;
+    if(p.dailyTaskDay===d && p.dailyTasks && p.dailyTasks.length) return;
+    var pool=[
+      {id:'sale',type:'sales',title:'Sahaya Çık',desc:'Bugün 1 satış tamamla',target:1,reward:12000,xp:90},
+      {id:'profit',type:'profit',title:'Kârlı İş',desc:'Bugün toplam 75.000 TL kâr yap',target:75000,reward:18000,xp:120},
+      {id:'inspect',type:'inspect',title:'Detaycı Simsar',desc:'Bugün 2 ekspertiz/TRAMER işlemi yap',target:2,reward:9000,xp:70},
+      {id:'repair',type:'repair',title:'Usta İş',desc:'Bugün 1 başarılı tamir tamamla',target:1,reward:10000,xp:80},
+      {id:'travel',type:'travel',title:'Piyasayı Geziyorum',desc:'Bugün 1 şehir değiştir',target:1,reward:8000,xp:65}
+    ];
+    var a=pool[(d*3)%pool.length], b=pool[(d*3+1)%pool.length], e=pool[(d*3+3)%pool.length];
+    p.dailyTasks=[a,b,e].map(function(t){return {id:t.id,type:t.type,title:t.title,desc:t.desc,target:t.target,progress:0,reward:t.reward,xp:t.xp,done:false};});
+    p.dailyTaskDay=d;
+  },
+  progressTask: function(type, amount){
+    var p=this.player; this.ensureDailyTasks();
+    p.dailyTasks.forEach(function(t){
+      if(t.done || t.type!==type) return;
+      t.progress=Math.min(t.target,t.progress+(amount||1));
+      if(t.progress>=t.target){
+        t.done=true;
+        p.earn(t.reward);
+        p.addMetaXp(t.xp);
+        toast('Görev tamamlandı: '+t.title+' +'+fmt(t.reward));
+        Game.addLog('Günlük görev tamamlandı: '+t.title+' — '+fmt(t.reward), 'pos');
+      }
+    });
+  },
+  leagueInfo: function(){
+    var s=Math.max(0,this.score());
+    var leagues=[
+      {name:'Çırak Simsar',min:0},
+      {name:'Mahalle Esnafı',min:2500},
+      {name:'Simsar',min:7500},
+      {name:'Usta Simsar',min:15000},
+      {name:'Pazar Ustası',min:28000},
+      {name:'Simsar Patronu',min:48000},
+      {name:'Efsane Simsar',min:80000}
+    ];
+    var cur=leagues[0], next=null;
+    leagues.forEach(function(l){if(s>=l.min) cur=l;});
+    for(var i=0;i<leagues.length;i++){if(leagues[i].min>s){next=leagues[i];break;}}
+    return {name:cur.name,min:cur.min,next:next,progress:next?Math.round((s-cur.min)/(next.min-cur.min)*100):100};
+  },
+  score: function(){
+    var p=this.player;
+    var assets=this.state.inventory.reduce(function(sum,i){return sum+(i.currentValue?Math.max(0,i.currentValue()):0);},0);
+    return Math.max(0,Math.round(
+      p.totalProfit/1000 + p.totalSales*850 +
+      Object.keys(p.skills).reduce(function(s,k){return s+p.skillLevel(k)*250;},0) +
+      p.achievements.length*1200 + assets/100000 + p.xp*4 + p.bestDealStreak*300
+    ));
+  },
+  eventForDay: function(day){
+    var defs=[
+      {title:'Dizel Talebi',desc:'Dizel araçlarda alıcı ilgisi arttı.',category:'araba',salesBonus:.12},
+      {title:'Arsa Hareketlendi',desc:'Arsa piyasasında alıcı trafiği yükseldi.',category:'arsa',salesBonus:.12},
+      {title:'Piyasa Durgun',desc:'Alıcılar daha seçici; satış ilgisi biraz düştü.',category:'all',salesBonus:-.08},
+      {title:'Nakit Piyasası',desc:'Nakit alıcılar piyasada. Hızlı satış ihtimali arttı.',category:'all',salesBonus:.06},
+      {title:'Galeriler Yoğun',desc:'Galeriler stok arıyor; araç satışları hızlandı.',category:'araba',salesBonus:.10},
+      {title:'Yatırımcı Günü',desc:'Yatırımcılar arsa ve dükkân bakıyor.',category:'arsa',salesBonus:.09}
+    ];
+    return defs[(day-1)%defs.length];
+  },
 
   // Gün-sonu bilançosu için tek-günlük gelir/gider defteri — her
   // doNextDay() çağrısının başında sıfırlanır, o gün içindeki OTOMATİK
@@ -91,6 +158,8 @@ export var Game = {
     OperationManager.init();
     this.state.listings = Market.refreshListings();
     this.state.partsMarket = Market.refreshPartsMarket();
+    this.state.marketEvent = this.eventForDay(this.state.day);
+    this.ensureDailyTasks();
     this.addLog('Simsarlığa hoş geldin. Kasanla ilan al, incele, tamir ettir, kârına sat.');
   },
 
@@ -215,6 +284,8 @@ export var Game = {
 
       self.addLog('TRAMER kaydı sorgulandı: ' + item.title + ' — ' + fmt(desc.cost), 'neg');
       self._fullInspectCount += 1;
+      self.progressTask('inspect',1);
+      player.addMetaXp(12);
       if(found.length>0) self._tramerCaughtCount += 1;
       player.addXp('ekspertiz', 20);
       self.checkAchievements();
@@ -242,6 +313,8 @@ export var Game = {
       var fromCity = player.currentCity;
       player.currentCity = city;
       self.state.travelTargetCity = null;
+      self.progressTask('travel',1);
+      player.addMetaXp(10);
       self.addLog('Seyahat edildi (' + (desc.mode==='car'?'araba':'otobüs') + '): ' + fromCity + ' → ' + city + ' — ' + fmt(desc.cost), 'neg');
       toast('Artık ' + city + ' şehrindesin.');
       // Sadece Araba modunda: seyahat aracının km'si kat edilen mesafeyle
@@ -317,6 +390,7 @@ export var Game = {
         self.addLog('Satın alındı: ' + item.title + ' — ' + fmt(item.purchasePrice), 'neg');
         toast('Satın alındı, Garajım sekmesinde.');
         player.addXp('pazarlik', 3);
+        player.addMetaXp(8);
         self.checkForKazik(item, hiddenLoss);
       }
       self.checkAchievements();
@@ -420,6 +494,8 @@ export var Game = {
       var ok = Math.random() < desc.successChance;
       if(ok){
         f.fixed = true;
+        player.addMetaXp(15);
+        self.progressTask('repair',1);
         self.addLog(usta.name + ' tamir etti: ' + item.title + ' — "' + f.label + '" — ' + fmt(desc.cost) + (usesPart ? ' (kendi parçanla)' : ''), 'neg');
         toast('Tamir başarılı: ' + f.label);
       } else {
@@ -563,6 +639,11 @@ export var Game = {
     player.addXp('pazarlik', 6);
     player.totalSales += 1;
     player.totalProfit += profit;
+    if(profit>0){ player.dealStreak += 1; player.bestDealStreak=Math.max(player.bestDealStreak,player.dealStreak); }
+    else { player.dealStreak = 0; }
+    player.addMetaXp(Math.max(5,Math.round(Math.abs(profit)/25000)));
+    this.progressTask('sales',1);
+    if(profit>0) this.progressTask('profit',profit);
     if(item.category==='araba') player.carsSold += 1;
     else if(item.category==='arsa') player.arsaSold += 1;
     else if(item.category==='dukkan') player.dukkanSold += 1;
@@ -639,6 +720,11 @@ export var Game = {
       player.addXp('isletme', 8);
       player.totalSales += 1;
       player.totalProfit += profit;
+      if(profit>0){ player.dealStreak += 1; player.bestDealStreak=Math.max(player.bestDealStreak,player.dealStreak); }
+      else player.dealStreak=0;
+      player.addMetaXp(Math.max(5,Math.round(Math.abs(profit)/25000)));
+      self.progressTask('sales',1);
+      if(profit>0) self.progressTask('profit',profit);
       self.render();
     });
   },
@@ -662,6 +748,11 @@ export var Game = {
     player.addXp('isletme', 8);
     player.totalSales += 1;
     player.totalProfit += profit;
+    if(profit>0){ player.dealStreak += 1; player.bestDealStreak=Math.max(player.bestDealStreak,player.dealStreak); }
+    else player.dealStreak=0;
+    player.addMetaXp(Math.max(5,Math.round(Math.abs(profit)/25000)));
+    this.progressTask('sales',1);
+    if(profit>0) this.progressTask('profit',profit);
     this.ledgerIncome('Vitrin satışları (pasif)', salePrice);
   },
 
@@ -791,6 +882,10 @@ export var Game = {
       var startBalance = player.balance;
       self._dayLedger = { expense: {}, income: {} };
       state.day += 1;
+      state.marketEvent = self.eventForDay(state.day);
+      self.ensureDailyTasks();
+      self.addLog('Piyasa olayı: '+state.marketEvent.title+' — '+state.marketEvent.desc, 'pos');
+      toast(state.marketEvent.title+': '+state.marketEvent.desc);
       // Favorilenen ilanlar günlük yenilemede kaybolmasın diye korunur,
       // yeni ilan havuzunun başına eklenir.
       var keptFavorites = state.listings.filter(function(l){ return l.favorite; });
@@ -940,7 +1035,9 @@ export var Game = {
         var priceRatio = item.listedPrice / Math.max(1,value);
         var overpricePenalty = clamp((priceRatio-1)*0.6, 0, 0.3);
         var boostBonus = item.boosted ? BOOST_ATTRACT_BONUS : 0;
-        var attractChance = clamp(0.32 + pLvl*0.015 - overpricePenalty + boostBonus + repBonus, 0.08, 0.85);
+        var eventBonus = 0;
+        if(self.state.marketEvent && (self.state.marketEvent.category==='all' || self.state.marketEvent.category===item.category)) eventBonus=self.state.marketEvent.salesBonus;
+        var attractChance = clamp(0.32 + pLvl*0.015 - overpricePenalty + boostBonus + repBonus + eventBonus, 0.08, 0.92);
         if(Math.random() < attractChance){
           var buyerName = pick(BUYER_NAMES);
           if(Math.random() < 0.45){
