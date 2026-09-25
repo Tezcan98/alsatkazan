@@ -11,6 +11,11 @@ export var GarageView = {
     var h2 = document.createElement('h2');
     h2.className = 'section';
     h2.innerHTML = 'Garajım <span class="count">(' + state.inventory.length + ')</span>';
+    var carCount = state.inventory.filter(function(i){return i.category==='araba';}).length;
+    var landCount = state.inventory.filter(function(i){return i.category==='arsa';}).length;
+    var cap = Game.player.garageCapacity + state.shops.filter(function(s){return s.shopType==='galeri' && s.mode==='kendim';}).reduce(function(n,s){return n+s.capacity;},0);
+    var wcap = Game.player.warehouseCapacity + state.shops.filter(function(s){return s.shopType==='emlak' && s.mode==='kendim';}).reduce(function(n,s){return n+s.capacity;},0);
+    var capNote=document.createElement('div'); capNote.className='desc-note'; capNote.textContent='Araç kapasitesi: '+carCount+'/'+cap+' · Arsa/depo kapasitesi: '+landCount+'/'+wcap; container.appendChild(capNote);
     container.appendChild(h2);
 
     if(state.inventory.length===0){
